@@ -100,6 +100,7 @@ export default {
     canvasSize: "当前尺寸",
     estimatedExport: "预计导出",
     exportHelp: "导出说明：系统根据当前选择的平台画布比例与分页策略自动生成对应数量的卡片，支持按设定的分辨率导出 PNG/JPG 多图、多页 PDF 或拼接单张长图。",
+    sponsor: "由 灵象工具箱 赞助支持",
   },
   runtime: {
     autosaveEnabled: "已开启",

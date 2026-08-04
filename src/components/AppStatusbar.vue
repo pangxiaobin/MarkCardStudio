@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import { isTauri } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import AppIcon from "./AppIcon.vue";
 
 const props = defineProps({
@@ -26,6 +28,18 @@ const statusBadgeClass = computed(() => {
   if (status.includes("失败") || status.includes("错误") || /fail|error/i.test(status)) return "bg-rose-500 text-white";
   return "bg-emerald-500 text-white";
 });
+
+const SPONSOR_URL = "https://lingxiangtools.top/?utm_source=markcard_studio&utm_medium=statusbar_sponsor&utm_campaign=sponsor_link&ref=markcard_studio";
+
+async function handleSponsorClick(event) {
+  if (!isTauri()) return;
+  event.preventDefault();
+  try {
+    await openUrl(SPONSOR_URL);
+  } catch (error) {
+    console.error("Failed to open sponsor URL:", error);
+  }
+}
 </script>
 
 <template>
@@ -36,6 +50,7 @@ const statusBadgeClass = computed(() => {
       </span>
       <span class="text-xs sm:text-sm font-medium transition-colors">{{ t("statusbar.autosave") }}: {{ autoSaveStatus }}</span>
     </div>
+
     <div class="absolute left-1/2 inline-flex h-10 -translate-x-1/2 items-center gap-5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-200 px-4 shadow-2xs">
       <span>{{ t("statusbar.canvasSize") }}: {{ canvasSizeLabel }}</span>
       <span>{{ t("statusbar.estimatedExport") }}: {{ t("common.imageCount", { count: pagesLength }) }}</span>
@@ -55,6 +70,21 @@ const statusBadgeClass = computed(() => {
           <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-100"></div>
         </div>
       </div>
+    </div>
+
+    <div class="inline-flex items-center">
+      <a
+        :href="SPONSOR_URL"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-colors"
+        :title="t('statusbar.sponsor')"
+        @click="handleSponsorClick"
+      >
+        <AppIcon name="sparkles" :size="12" class="text-indigo-500 dark:text-indigo-400" />
+        <span>{{ t("statusbar.sponsor") }}</span>
+        <AppIcon name="external-link" :size="11" class="opacity-70" />
+      </a>
     </div>
   </footer>
 </template>

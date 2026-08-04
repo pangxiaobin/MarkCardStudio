@@ -1,0 +1,216 @@
+name: Release desktop apps
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build (for example v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare-release:
+    name: Prepare GitHub release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.release.outputs.result }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Validate release version
+        id: version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid tag '$RELEASE_TAG'. Expected a tag such as v0.1.0."
+            exit 1
+          fi
+
+          APP_VERSION="$(node -p "require('./package.json').version")"
+          TAURI_VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          CARGO_VERSION="$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' src-tauri/Cargo.toml | head -n 1)"
+          UI_VERSION="$(node -e "import('./src/config/appInfo.js').then(({ APP_INFO }) => console.log(APP_INFO.version))")"
+          TAG_VERSION="${RELEASE_TAG#v}"
+
+          if [[ "$TAG_VERSION" != "$APP_VERSION" || "$TAG_VERSION" != "$TAURI_VERSION" || "$TAG_VERSION" != "$CARGO_VERSION" || "$TAG_VERSION" != "$UI_VERSION" ]]; then
+            echo "Version mismatch: tag=$TAG_VERSION package=$APP_VERSION tauri=$TAURI_VERSION cargo=$CARGO_VERSION ui=$UI_VERSION"
+            exit 1
+          fi
+
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update draft release
+        id: release
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = process.env.RELEASE_TAG;
+            const body = `## Downloads / 下载说明
+
+            - **Windows:** download the \`.msi\` or \`-setup.exe\` installer.  
+              **Windows：**下载 \`.msi\` 或 \`-setup.exe\` 安装包。
+            - **macOS Apple Silicon:** download the \`aarch64.dmg\` file for M-series chips.  
+              **macOS Apple 芯片：**M 系列芯片请下载 \`aarch64.dmg\`。
+            - **macOS Intel:** download the \`x64.dmg\` file.  
+              **macOS Intel 芯片：**请下载 \`x64.dmg\`。
+            - **Linux:** download the \`.AppImage\` or \`.deb\` package.  
+              **Linux：**下载 \`.AppImage\` 或 \`.deb\` 安装包。
+
+            macOS packages are currently unsigned. If Gatekeeper blocks the app, allow it in **System Settings > Privacy & Security**.  
+            macOS 安装包目前未签名。如被 Gatekeeper 阻止，请前往**系统设置 > 隐私与安全性**允许打开。`;
+
+            let release;
+            try {
+              release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.data.id,
+                name: `MarkCard Studio ${tag}`,
+                body,
+                draft: release.data.draft,
+                prerelease: tag.includes("-"),
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              release = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tag,
+                name: `MarkCard Studio ${tag}`,
+                body,
+                draft: true,
+                prerelease: tag.includes("-"),
+              });
+            }
+
+            return release.data.id;
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS Apple Silicon
+            platform: macos-latest
+            target: aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+          - label: macOS Intel
+            platform: macos-15-intel
+            target: x86_64-apple-darwin
+            rust_targets: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin
+          - label: Windows x64
+            platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            args: --target x86_64-pc-windows-msvc
+          - label: Linux x64
+            platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            args: --target x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Locate pnpm store
+        id: pnpm-cache
+        shell: bash
+        run: echo "store_path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store_path }}
+          key: ${{ runner.os }}-${{ matrix.target }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-pnpm-
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          key: ${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and upload bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.prepare-release.outputs.release_id }}
+          args: ${{ matrix.args }}
+
+  publish-release:
+    name: Publish GitHub release
+    needs:
+      - prepare-release
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: actions/github-script@v7
+        env:
+          RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: Number(process.env.RELEASE_ID),
+              draft: false,
+            });

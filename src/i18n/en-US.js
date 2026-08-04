@@ -100,6 +100,7 @@ export default {
     canvasSize: "Canvas",
     estimatedExport: "Estimated export",
     exportHelp: "Export Info: System automatically splits cards according to selected platform ratio and pagination settings, supporting multi-card PNG/JPG, multi-page PDF, or stitched long PNG.",
+    sponsor: "Sponsored by Lingxiang Tools",
   },
   runtime: {
     autosaveEnabled: "On",
