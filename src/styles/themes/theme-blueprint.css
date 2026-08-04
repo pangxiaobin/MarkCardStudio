@@ -1,0 +1,20 @@
+/* 蓝图工坊：深蓝图纸与测量线 */
+.card-canvas.theme-blueprint { background: #075985; background-image: linear-gradient(rgba(186,230,253,.17) 1px, transparent 1px), linear-gradient(90deg, rgba(186,230,253,.17) 1px, transparent 1px); background-size: 20px 20px; color: #e0f2fe; border: 2px solid #7dd3fc; border-radius: 2px; box-shadow: 0 0 0 6px #0c4a6e, 0 18px 36px rgba(7,89,133,.3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.card-canvas.theme-blueprint h1 { color: #fff; font-size: clamp(23px, 4.8cqw, 31px); letter-spacing: .02em; border-bottom: 2px solid #7dd3fc; padding-bottom: 8px; }
+.card-canvas.theme-blueprint h1::before { content: "["; color: #7dd3fc; } .card-canvas.theme-blueprint h1::after { content: "]"; color: #7dd3fc; }
+.card-canvas.theme-blueprint .card-h2 { color: #bae6fd; border-left: 4px solid #38bdf8; padding-left: 8px; }
+.card-canvas.theme-blueprint .card-h3 { color: #7dd3fc; }
+.card-canvas.theme-blueprint .card-blockquote { border-left: 4px solid #facc15; background: rgba(8,47,73,.5); color: #e0f2fe; border-radius: 0; }
+.card-canvas.theme-blueprint .list-dot { background: #facc15; border-radius: 0; }
+.card-canvas.theme-blueprint .list-num-badge { background: transparent; color: #bae6fd; border: 1px solid #7dd3fc; border-radius: 0; }
+.card-canvas.theme-blueprint .task-badge { border-radius: 0; border-color: #7dd3fc; color: #bae6fd; }
+.card-canvas.theme-blueprint .task-badge.checked { background: #38bdf8; color: #082f49; }
+.card-canvas.theme-blueprint mark { background: #facc15; color: #082f49; padding: 1px 5px; }
+.card-canvas.theme-blueprint .card-code-block { background: #082f49; color: #bae6fd; border: 1px solid #38bdf8; border-radius: 0; }
+.card-canvas.theme-blueprint .code-lang-badge { color: #facc15; }
+.card-canvas.theme-blueprint .inline-code { background: rgba(125,211,252,.18); color: #bae6fd; border: 1px solid rgba(125,211,252,.4); border-radius: 0; }
+.card-canvas.theme-blueprint .card-table-wrap { border: 1px solid #7dd3fc; border-radius: 0; }
+.card-canvas.theme-blueprint .card-table th { background: rgba(14,116,144,.8); color: #fff; }
+.card-canvas.theme-blueprint .card-table td { border-bottom-color: rgba(186,230,253,.25); }
+.card-canvas.theme-blueprint .card-divider { border-top: 1px dashed #7dd3fc; }
+.card-canvas.theme-blueprint.is-cover h1 { max-width: 90%; margin-top: 24px; }

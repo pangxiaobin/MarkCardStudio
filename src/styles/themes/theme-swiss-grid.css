@@ -1,0 +1,18 @@
+/* 瑞士网格：强网格、Helvetica 与红色索引 */
+.card-canvas.theme-swiss-grid { background: #fff; background-image: linear-gradient(90deg, rgba(15,23,42,.045) 1px, transparent 1px), linear-gradient(rgba(15,23,42,.045) 1px, transparent 1px); background-size: 32px 32px; color: #111827; border: 1px solid #cbd5e1; border-radius: 0; box-shadow: 0 16px 32px rgba(15,23,42,.12); font-family: Helvetica, Arial, "PingFang SC", sans-serif; }
+.card-canvas.theme-swiss-grid h1 { color: #111827; font-weight: 900; font-size: clamp(25px, 5cqw, 34px); letter-spacing: -.045em; border-bottom: 8px solid #ef233c; padding-bottom: 8px; }
+.card-canvas.theme-swiss-grid .card-h2 { color: #ef233c; font-weight: 800; }
+.card-canvas.theme-swiss-grid .card-h3 { color: #334155; }
+.card-canvas.theme-swiss-grid .card-blockquote { border-left: 8px solid #ef233c; background: #f8fafc; color: #334155; border-radius: 0; font-style: normal; }
+.card-canvas.theme-swiss-grid .list-dot { width: 7px; height: 7px; border-radius: 0; background: #ef233c; }
+.card-canvas.theme-swiss-grid .list-num-badge { background: #ef233c; color: #fff; border-radius: 0; }
+.card-canvas.theme-swiss-grid .task-badge { border-radius: 0; border: 2px solid #ef233c; color: #ef233c; }
+.card-canvas.theme-swiss-grid .task-badge.checked { background: #ef233c; color: white; }
+.card-canvas.theme-swiss-grid mark { background: #fef08a; color: #111827; border-bottom: 2px solid #ef233c; }
+.card-canvas.theme-swiss-grid .card-code-block { background: #111827; color: #f8fafc; border-radius: 0; border-left: 5px solid #ef233c; }
+.card-canvas.theme-swiss-grid .code-lang-badge { color: #fb7185; }
+.card-canvas.theme-swiss-grid .inline-code { background: #fee2e2; color: #be123c; border-radius: 0; }
+.card-canvas.theme-swiss-grid .card-table-wrap { border: 1px solid #111827; border-radius: 0; }
+.card-canvas.theme-swiss-grid .card-table th { background: #111827; color: #fff; }
+.card-canvas.theme-swiss-grid .card-divider { border-top: 1px solid #111827; }
+.card-canvas.theme-swiss-grid.is-cover h1 { width: 100%; margin-top: 30px; }

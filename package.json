@@ -1,0 +1,44 @@
+{
+  "name": "markcardstudio",
+  "private": true,
+  "version": "0.1.0",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-markdown": "^6.5.1",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.7",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
+    "highlight.js": "^11.11.1",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
+    "katex": "^0.18.1",
+    "markdown-it": "^15.0.0",
+    "markdown-it-anchor": "^9.2.1",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-emoji": "^3.1.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.16.0",
+    "vue": "^3.5.13",
+    "vue-i18n": "^11.4.8"
+  },
+  "devDependencies": {
+    "@lucide/vue": "^1.28.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "daisyui": "^5.7.9",
+    "tailwindcss": "^4.3.3",
+    "vite": "^6.0.3"
+  }
+}

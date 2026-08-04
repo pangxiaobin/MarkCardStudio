@@ -1,0 +1,28 @@
+/* 1. 暖阳日记 (theme-warm) */
+.card-canvas.theme-warm {
+  background: linear-gradient(180deg, #fff9ee 0%, #fff3db 100%);
+  color: #3c3027;
+}
+
+.card-canvas.theme-warm h1 { color: #2d2118; }
+
+.card-canvas.theme-warm .card-code-block {
+  background: #2b221b;
+  color: #fceade;
+}
+
+.card-canvas.theme-warm .code-lang-badge { color: #f59e0b; }
+
+.card-canvas.theme-warm .inline-code {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.card-canvas.theme-warm .card-table th {
+  background: rgba(245, 158, 11, 0.12);
+  color: #78350f;
+}
+
+.card-canvas.theme-warm .card-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.5);
+}

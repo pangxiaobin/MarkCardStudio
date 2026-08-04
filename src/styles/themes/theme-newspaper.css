@@ -1,0 +1,135 @@
+/* 7. 复古报刊 (theme-newspaper) */
+.card-canvas.theme-newspaper {
+  background: #fdf6e2;
+  color: #291e13;
+  font-family: "Georgia", "Times New Roman", "Songti SC", "STSong", serif;
+  border: 1px solid #d6c59a;
+  box-shadow: 0 14px 40px rgba(80, 50, 20, 0.15);
+}
+
+.card-canvas.theme-newspaper h1 {
+  font-family: "Playfair Display", "Georgia", "Songti SC", serif;
+  color: #1a120b;
+  text-align: center;
+  font-size: clamp(24px, 5cqw, 30px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-top: 3px double #78350f;
+  border-bottom: 3px double #78350f;
+  padding: 8px 0;
+  margin: 6px 0 14px;
+}
+
+.card-canvas.theme-newspaper .card-h2 {
+  font-family: "Georgia", serif;
+  color: #451a03;
+  border-bottom: 1.5px solid #78350f;
+  padding-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card-canvas.theme-newspaper .card-h3 {
+  font-family: "Georgia", serif;
+  color: #78350f;
+  font-weight: 700;
+}
+
+/* Drop-Cap styling for first paragraph */
+.card-canvas.theme-newspaper .card-paragraph:first-of-type::first-letter {
+  font-size: 2.6em;
+  float: left;
+  line-height: 0.82;
+  margin-right: 8px;
+  font-weight: bold;
+  color: #78350f;
+  font-family: "Georgia", serif;
+}
+
+.card-canvas.theme-newspaper .card-blockquote {
+  border-top: 2px solid #78350f;
+  border-bottom: 2px solid #78350f;
+  border-left: none;
+  border-right: none;
+  background: rgba(120, 53, 15, 0.05);
+  color: #451a03;
+  text-align: center;
+  font-style: italic;
+  padding: 12px 16px;
+  border-radius: 0;
+  margin: 12px 0;
+}
+
+/* Vintage Task Checkbox */
+.card-canvas.theme-newspaper .task-badge {
+  border-radius: 0;
+  border-color: #78350f;
+  color: #78350f;
+}
+
+.card-canvas.theme-newspaper .task-badge.checked {
+  background: #78350f;
+  color: #fdf6e2;
+}
+
+.card-canvas.theme-newspaper mark {
+  background: #fde68a;
+  color: #451a03;
+  padding: 1px 4px;
+  border-bottom: 1px solid #78350f;
+}
+
+.card-canvas.theme-newspaper .list-dot {
+  background: #78350f;
+  border-radius: 0;
+  width: 5px;
+  height: 5px;
+}
+
+.card-canvas.theme-newspaper .list-num-badge {
+  background: transparent;
+  color: #78350f;
+  border: 1.5px solid #78350f;
+  border-radius: 0;
+  font-family: "Georgia", serif;
+  font-weight: 900;
+}
+
+.card-canvas.theme-newspaper .card-code-block {
+  background: #241b14;
+  color: #fef3c7;
+  border-radius: 2px;
+  border: 1px solid #78350f;
+}
+
+.card-canvas.theme-newspaper .code-lang-badge {
+  color: #f59e0b;
+}
+
+.card-canvas.theme-newspaper .inline-code {
+  background: rgba(120, 53, 15, 0.12);
+  color: #78350f;
+  font-weight: bold;
+}
+
+.card-canvas.theme-newspaper .card-table-wrap {
+  border: 1.5px solid #78350f;
+  border-radius: 0;
+}
+
+.card-canvas.theme-newspaper .card-table th {
+  background: #78350f;
+  color: #fef3c7;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.card-canvas.theme-newspaper .card-table td {
+  border-bottom: 1px solid rgba(120, 53, 15, 0.2);
+}
+
+.card-canvas.theme-newspaper .card-divider {
+  border-top: 3px double #78350f;
+  border-bottom: none;
+  opacity: 0.8;
+}

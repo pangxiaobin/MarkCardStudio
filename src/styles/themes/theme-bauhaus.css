@@ -1,0 +1,19 @@
+/* 包豪斯拼贴：几何色块与展览海报 */
+.card-canvas.theme-bauhaus { background: #fffdf5; color: #171717; border: 2px solid #171717; border-radius: 0; box-shadow: 12px 12px 0 #e63946; font-family: "Arial", "PingFang SC", sans-serif; }
+.card-canvas.theme-bauhaus::before { content: ""; position: absolute; width: 82px; height: 82px; right: -18px; top: -22px; border-radius: 50%; background: #f4c430; box-shadow: -72px 72px 0 #1d4ed8; opacity: .88; }
+.card-canvas.theme-bauhaus h1 { color: #171717; font-size: clamp(26px, 5.4cqw, 36px); font-weight: 950; line-height: 1.05; max-width: 82%; }
+.card-canvas.theme-bauhaus .card-h2 { color: #e63946; text-transform: uppercase; letter-spacing: .08em; border-bottom: 4px solid #171717; }
+.card-canvas.theme-bauhaus .card-h3 { color: #1d4ed8; }
+.card-canvas.theme-bauhaus .card-blockquote { border: 0; background: #f4c430; color: #171717; border-radius: 0; font-style: normal; transform: rotate(-1deg); }
+.card-canvas.theme-bauhaus .list-dot { background: #e63946; border-radius: 50%; }
+.card-canvas.theme-bauhaus .list-num-badge { background: #1d4ed8; color: #fff; border-radius: 50%; }
+.card-canvas.theme-bauhaus .task-badge { border-radius: 0; border-color: #171717; color: #e63946; }
+.card-canvas.theme-bauhaus .task-badge.checked { background: #e63946; color: #fff; }
+.card-canvas.theme-bauhaus mark { background: #f4c430; color: #171717; padding: 1px 5px; }
+.card-canvas.theme-bauhaus .card-code-block { background: #171717; color: #fff7ed; border-radius: 0; border-right: 8px solid #1d4ed8; }
+.card-canvas.theme-bauhaus .code-lang-badge { color: #f4c430; }
+.card-canvas.theme-bauhaus .inline-code { background: #dbeafe; color: #1d4ed8; border-radius: 0; }
+.card-canvas.theme-bauhaus .card-table-wrap { border: 2px solid #171717; border-radius: 0; }
+.card-canvas.theme-bauhaus .card-table th { background: #e63946; color: #fff; }
+.card-canvas.theme-bauhaus .card-divider { border-top: 4px solid #171717; }
+.card-canvas.theme-bauhaus.is-cover h1 { margin-top: 25px; }

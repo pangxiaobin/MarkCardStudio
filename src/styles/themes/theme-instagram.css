@@ -1,0 +1,120 @@
+/* 5. Instagram 时尚 (theme-instagram) */
+.card-canvas.theme-instagram {
+  background: #ffffff;
+  color: #111827;
+  border: 4px solid transparent;
+  background-image: linear-gradient(#ffffff, #ffffff), linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 20px 50px rgba(225, 48, 108, 0.18);
+}
+
+.card-canvas.theme-instagram h1 {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-size: clamp(24px, 5cqw, 32px);
+}
+
+.card-canvas.theme-instagram .card-h2 {
+  color: #ffffff;
+  background: linear-gradient(135deg, #833ab4, #fd1d1d);
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(225, 48, 108, 0.3);
+  font-size: 1rem;
+}
+
+.card-canvas.theme-instagram .card-h3 {
+  color: #e1306c;
+  font-weight: 800;
+}
+
+/* Translucent Frost Glass Blockquote */
+.card-canvas.theme-instagram .card-blockquote {
+  border-left: 4px solid #fd1d1d;
+  background: linear-gradient(90deg, rgba(253, 29, 29, 0.08), rgba(131, 58, 180, 0.04));
+  color: #1f2937;
+  border-radius: 0 16px 16px 0;
+  backdrop-filter: blur(8px);
+  padding: 10px 16px;
+}
+
+/* Gradient Checkbox */
+.card-canvas.theme-instagram .task-badge {
+  border-radius: 6px;
+  border-color: #e1306c;
+  color: #e1306c;
+}
+
+.card-canvas.theme-instagram .task-badge.checked {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(225, 48, 108, 0.4);
+}
+
+.card-canvas.theme-instagram mark {
+  background: linear-gradient(90deg, rgba(253, 29, 29, 0.2), rgba(252, 176, 69, 0.3));
+  color: #833ab4;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.card-canvas.theme-instagram .list-dot {
+  background: linear-gradient(135deg, #fd1d1d, #fcb045);
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 6px rgba(253, 29, 29, 0.5);
+}
+
+.card-canvas.theme-instagram .list-num-badge {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d);
+  color: #ffffff;
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgba(225, 48, 108, 0.4);
+}
+
+.card-canvas.theme-instagram .card-code-block {
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.3);
+}
+
+.card-canvas.theme-instagram .code-lang-badge {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+}
+
+.card-canvas.theme-instagram .inline-code {
+  background: rgba(131, 58, 180, 0.12);
+  color: #833ab4;
+  font-weight: 700;
+}
+
+.card-canvas.theme-instagram .card-table-wrap {
+  border-radius: 14px;
+  border: 1px solid rgba(225, 48, 108, 0.25);
+  box-shadow: 0 4px 16px rgba(225, 48, 108, 0.08);
+}
+
+.card-canvas.theme-instagram .card-table th {
+  background: linear-gradient(90deg, rgba(131, 58, 180, 0.15), rgba(253, 29, 29, 0.15));
+  color: #833ab4;
+  font-weight: 800;
+}
+
+.card-canvas.theme-instagram .card-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #833ab4, #fd1d1d, #fcb045);
+  border: none;
+  opacity: 0.8;
+}

@@ -1,0 +1,154 @@
+/* 8. 暗黑极客 (theme-cyberpunk) */
+.card-canvas.theme-cyberpunk {
+  background: #070a12;
+  background-image:
+    linear-gradient(rgba(34, 197, 94, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 197, 94, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: #4ade80;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  border: 1.5px solid #22c55e;
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.3), inset 0 0 16px rgba(34, 197, 94, 0.12);
+  border-radius: 12px;
+}
+
+.card-canvas.theme-cyberpunk h1 {
+  color: #22c55e;
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+  letter-spacing: 0.03em;
+  font-size: clamp(24px, 5cqw, 30px);
+}
+
+.card-canvas.theme-cyberpunk h1::before {
+  content: "> ";
+  color: #a855f7;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+}
+
+.card-canvas.theme-cyberpunk .card-h2 {
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+  display: inline-block;
+  border-bottom: 1px solid #38bdf8;
+  padding-bottom: 2px;
+}
+
+.card-canvas.theme-cyberpunk .card-h2::before {
+  content: "// ";
+  color: #22c55e;
+}
+
+.card-canvas.theme-cyberpunk .card-h3 {
+  color: #c084fc;
+  text-shadow: 0 0 8px rgba(192, 132, 252, 0.7);
+}
+
+.card-canvas.theme-cyberpunk .card-h3::before {
+  content: "$ ";
+  color: #38bdf8;
+}
+
+/* CLI System Prompt Blockquote */
+.card-canvas.theme-cyberpunk .card-blockquote {
+  border-left: 4px solid #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+  color: #e9d5ff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+}
+
+.card-canvas.theme-cyberpunk .card-blockquote::before {
+  content: "[SYS_ALERT] ";
+  font-weight: bold;
+  color: #c084fc;
+}
+
+/* Terminal Square Checkbox */
+.card-canvas.theme-cyberpunk .task-badge {
+  border-radius: 2px;
+  border-color: #22c55e;
+  color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.card-canvas.theme-cyberpunk .task-badge.checked {
+  background: #22c55e;
+  color: #070a12;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+
+.card-canvas.theme-cyberpunk mark {
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+  border: 1px solid #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.card-canvas.theme-cyberpunk .list-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  border-radius: 1px;
+  width: 6px;
+  height: 6px;
+}
+
+.card-canvas.theme-cyberpunk .list-num-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid #38bdf8;
+  border-radius: 3px;
+  font-weight: 900;
+  text-shadow: 0 0 6px #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.card-canvas.theme-cyberpunk .card-code-block {
+  background: #020617;
+  border: 1px solid #22c55e;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+  border-radius: 8px;
+}
+
+.card-canvas.theme-cyberpunk .code-lang-badge {
+  color: #a855f7;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.9);
+}
+
+.card-canvas.theme-cyberpunk .inline-code {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.3);
+}
+
+.card-canvas.theme-cyberpunk .card-table-wrap {
+  border: 1.5px solid #22c55e;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.2);
+  border-radius: 6px;
+}
+
+.card-canvas.theme-cyberpunk .card-table th {
+  background: rgba(34, 197, 94, 0.22);
+  color: #86efac;
+  text-shadow: 0 0 6px rgba(134, 239, 172, 0.6);
+}
+
+.card-canvas.theme-cyberpunk .card-table td {
+  border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.card-canvas.theme-cyberpunk .card-divider {
+  border-top: 1px solid #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  opacity: 0.9;
+}
+
+.theme-cyberpunk .hljs-keyword { color: #f43f5e; text-shadow: 0 0 5px rgba(244, 63, 94, 0.6); }
+.theme-cyberpunk .hljs-string { color: #22c55e; text-shadow: 0 0 5px rgba(34, 197, 94, 0.6); }
+.theme-cyberpunk .hljs-comment { color: #64748b; }
+.theme-cyberpunk .hljs-number { color: #c084fc; text-shadow: 0 0 5px rgba(192, 132, 252, 0.6); }
+.theme-cyberpunk .hljs-function { color: #38bdf8; text-shadow: 0 0 5px rgba(56, 189, 248, 0.6); }

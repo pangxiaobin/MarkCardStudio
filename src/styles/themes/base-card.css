@@ -1,0 +1,349 @@
+/* --- Base Card Container & Universal Markdown Layout --- */
+
+.card-canvas {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 20px 22px;
+  border-radius: 18px;
+  box-shadow: 0 20px 44px rgba(32, 39, 55, 0.18);
+  transition: width 200ms ease, height 200ms ease, aspect-ratio 200ms ease;
+}
+
+.card-scroll-area {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: hidden;
+  padding-right: 4px;
+}
+
+.card-canvas h1 {
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 12px;
+  font-size: clamp(22px, 4.5cqw, 28px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.card-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Headings & Text */
+.card-h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  line-height: 1.3;
+}
+
+.card-h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 10px 0 4px;
+  line-height: 1.3;
+}
+
+.card-paragraph {
+  font-size: 0.925rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Blockquotes */
+.card-blockquote {
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-left: 3.5px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Lists */
+.card-list, .card-ordered-list {
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-list li, .card-ordered-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.list-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-top: 7px;
+  flex-shrink: 0;
+}
+
+.list-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+/* Task Checkboxes */
+.card-task-list {
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.task-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.task-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  transition: all 150ms ease;
+}
+
+.task-badge.checked {
+  background: currentColor;
+  color: #ffffff;
+}
+
+.task-badge.unchecked {
+  background: transparent;
+  opacity: 0.4;
+}
+
+/* Code Blocks */
+.card-code-block {
+  position: relative;
+  margin: 8px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.code-lang-badge {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.card-code-block pre {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84em;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Tables */
+.card-table-wrap {
+  margin: 8px 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.card-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.card-table th, .card-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.card-table th {
+  font-weight: 700;
+}
+
+/* Images */
+.card-image-wrap {
+  margin: 8px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 220px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.card-image {
+  max-height: 200px;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Static media blocks must fit the card instead of creating scrollable areas. */
+.mermaid-raw-box {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mermaid-diagram,
+.mermaid-export-image {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  height: auto;
+  object-fit: contain;
+}
+
+.katex-display-block {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.katex-export-image {
+  display: inline-block;
+  max-width: 100%;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.card-divider {
+  border: none;
+  height: 1px;
+  margin: 12px 0;
+  opacity: 0.2;
+}
+
+/* Syntax Highlighting */
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #f43f5e; font-weight: 600; }
+.hljs-string, .hljs-title, .hljs-section, .hljs-attribute { color: #10b981; }
+.hljs-comment, .hljs-quote { color: #94a3b8; font-style: italic; }
+.hljs-number, .hljs-literal, .hljs-variable { color: #fb923c; }
+.hljs-function, .hljs-name { color: #38bdf8; }
+
+/* Callout Boxes */
+.card-callout {
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+.card-callout.callout-tip {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #047857;
+}
+.card-callout.callout-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #b45309;
+}
+.card-callout.callout-danger {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: #be123c;
+}
+.card-callout.callout-info, .card-callout.callout-note {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #1d4ed8;
+}
+
+/* Keyboard Input Badges */
+.card-kbd {
+  display: inline-block;
+  padding: 1.5px 5px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1;
+  color: #334155;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-bottom: 2px solid #94a3b8;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Inline Links */
+.card-inline-link {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+
+/* Footnotes */
+.card-footnote-sup {
+  font-size: 0.72em;
+  font-weight: 800;
+  color: #8b5cf6;
+  margin-left: 2px;
+}

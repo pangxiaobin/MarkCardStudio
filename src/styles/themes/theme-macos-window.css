@@ -1,0 +1,20 @@
+/* 苹果窗口：系统窗口 chrome 与磨砂玻璃 */
+.card-canvas.theme-macos-window { background: linear-gradient(145deg, #f8fbff, #e8f0f9); color: #1e293b; border: 1px solid rgba(255,255,255,.9); border-radius: 16px; box-shadow: 0 22px 50px rgba(30,64,175,.18), inset 0 1px 0 #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif; padding-top: 54px; }
+.card-canvas.theme-macos-window::before { content: "●  ●  ●"; position: absolute; left: 18px; right: 0; top: 0; height: 38px; padding-top: 9px; color: #ff5f57; font-size: 13px; letter-spacing: 3px; background: rgba(255,255,255,.58); border-bottom: 1px solid rgba(148,163,184,.25); }
+.card-canvas.theme-macos-window::after { content: "⌘  MarkCard"; position: absolute; right: 18px; top: 12px; color: #64748b; font: 11px ui-monospace, monospace; }
+.card-canvas.theme-macos-window h1 { color: #0f172a; font-size: clamp(24px, 5cqw, 32px); font-weight: 850; }
+.card-canvas.theme-macos-window .card-h2 { color: #2563eb; background: rgba(147,197,253,.2); padding: 5px 10px; border-radius: 8px; }
+.card-canvas.theme-macos-window .card-h3 { color: #475569; }
+.card-canvas.theme-macos-window .card-blockquote { border-left: 4px solid #0a84ff; background: rgba(255,255,255,.52); color: #334155; border-radius: 10px; box-shadow: 0 5px 15px rgba(30,64,175,.08); backdrop-filter: blur(12px); }
+.card-canvas.theme-macos-window .list-dot { background: #0a84ff; }
+.card-canvas.theme-macos-window .list-num-badge { background: #dbeafe; color: #1d4ed8; border-radius: 8px; }
+.card-canvas.theme-macos-window .task-badge { border-color: #0a84ff; color: #0a84ff; border-radius: 50%; }
+.card-canvas.theme-macos-window .task-badge.checked { background: #34c759; border-color: #34c759; color: #fff; }
+.card-canvas.theme-macos-window mark { background: #fff3a3; color: #334155; border-radius: 5px; padding: 2px 5px; }
+.card-canvas.theme-macos-window .card-code-block { background: rgba(15,23,42,.92); border-radius: 10px; color: #e0f2fe; }
+.card-canvas.theme-macos-window .code-lang-badge { color: #60a5fa; }
+.card-canvas.theme-macos-window .inline-code { background: rgba(147,197,253,.28); color: #1d4ed8; }
+.card-canvas.theme-macos-window .card-table-wrap { border: 1px solid rgba(96,165,250,.35); border-radius: 10px; background: rgba(255,255,255,.38); }
+.card-canvas.theme-macos-window .card-table th { background: rgba(147,197,253,.28); color: #1e40af; }
+.card-canvas.theme-macos-window .card-divider { border-top: 1px solid rgba(96,165,250,.6); }
+.card-canvas.theme-macos-window.is-cover h1 { max-width: 88%; margin-top: 22px; }

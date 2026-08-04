@@ -1,0 +1,230 @@
+/* Decorative OpenMoji layer used only on document cover cards. */
+.card-canvas.is-cover .cover-sticker-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Text always wins when a long title reaches a decorative safe area. */
+.card-canvas.is-cover .card-scroll-area {
+  z-index: 3;
+}
+
+.card-canvas.is-cover h1 {
+  position: relative;
+  z-index: 3;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+.cover-sticker {
+  position: absolute;
+  display: block;
+  width: 58px;
+  height: 58px;
+  padding: 5px;
+  object-fit: contain;
+  transform-origin: center;
+  filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.15));
+}
+
+.cover-sticker--top-right {
+  top: 13px;
+  right: 14px;
+  transform: rotate(8deg);
+}
+
+.cover-sticker--bottom-left {
+  bottom: 14px;
+  left: 14px;
+  width: 50px;
+  height: 50px;
+  transform: rotate(-9deg);
+}
+
+.cover-sticker--bottom-right {
+  right: 14px;
+  bottom: 14px;
+  width: 52px;
+  height: 52px;
+  transform: rotate(9deg);
+}
+
+/* Cover-title composition changes with the selected visual theme. */
+.card-canvas.theme-warm.is-cover h1 {
+  max-width: 82%;
+  margin-top: 22px;
+}
+
+.card-canvas.theme-fresh.is-cover h1 {
+  max-width: 86%;
+  margin: 30px auto 16px;
+  text-align: center;
+}
+
+.card-canvas.theme-ink.is-cover h1 {
+  max-width: 82%;
+  margin-top: 26px;
+  padding-left: 12px;
+  border-left: 4px solid #818cf8;
+}
+
+.card-canvas.theme-apple-notes.is-cover h1 {
+  max-width: 80%;
+  margin-top: 24px;
+  transform: rotate(-1deg);
+}
+
+.card-canvas.theme-instagram.is-cover h1 {
+  max-width: 90%;
+  margin: 32px auto 18px;
+  text-align: center;
+}
+
+.card-canvas.theme-spiral.is-cover h1 {
+  max-width: 82%;
+  margin-top: 24px;
+}
+
+.card-canvas.theme-newspaper.is-cover h1 {
+  width: 100%;
+  margin-top: 28px;
+}
+
+.card-canvas.theme-cyberpunk.is-cover h1 {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 12px;
+  padding-right: 0;
+  font-size: clamp(22px, 4.4cqw, 27px);
+  line-height: 1.18;
+  word-break: normal;
+}
+
+.card-canvas.is-cover .cover-sticker-layer::before,
+.card-canvas.is-cover .cover-sticker-layer::after {
+  position: absolute;
+  content: "";
+  border-radius: 999px;
+  opacity: 0.75;
+}
+
+.card-canvas.is-cover .cover-sticker-layer::before {
+  top: 82px;
+  right: 24px;
+  width: 8px;
+  height: 8px;
+}
+
+.card-canvas.is-cover .cover-sticker-layer::after {
+  right: 72px;
+  bottom: 34px;
+  width: 6px;
+  height: 6px;
+}
+
+.card-canvas.theme-warm.is-cover .cover-sticker {
+  background: rgba(255, 255, 255, 0.78);
+  border: 2px solid rgba(245, 158, 11, 0.25);
+  border-radius: 20px;
+}
+.card-canvas.theme-warm.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-warm.is-cover .cover-sticker-layer::after { background: #f59e0b; }
+
+.card-canvas.theme-fresh.is-cover .cover-sticker {
+  background: rgba(236, 253, 245, 0.9);
+  border: 2px solid rgba(16, 185, 129, 0.28);
+  border-radius: 50% 44% 52% 46%;
+}
+.card-canvas.theme-fresh.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-fresh.is-cover .cover-sticker-layer::after { background: #10b981; }
+
+.card-canvas.theme-ink.is-cover .cover-sticker {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(129, 140, 248, 0.7);
+  border-radius: 14px;
+  filter: drop-shadow(0 0 10px rgba(129, 140, 248, 0.45));
+}
+.card-canvas.theme-ink.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-ink.is-cover .cover-sticker-layer::after { background: #818cf8; box-shadow: 0 0 8px #818cf8; }
+
+.card-canvas.theme-apple-notes.is-cover .cover-sticker {
+  background: rgba(254, 249, 195, 0.94);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  border-radius: 8px;
+  box-shadow: 3px 4px 0 rgba(234, 179, 8, 0.16);
+}
+.card-canvas.theme-apple-notes.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-apple-notes.is-cover .cover-sticker-layer::after { background: #eab308; }
+
+.card-canvas.theme-instagram.is-cover .cover-sticker {
+  background: rgba(255, 255, 255, 0.96);
+  border: 3px solid #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(225, 48, 108, 0.28);
+}
+.card-canvas.theme-instagram.is-cover .cover-sticker-layer::before { background: #fd1d1d; }
+.card-canvas.theme-instagram.is-cover .cover-sticker-layer::after { background: #833ab4; }
+
+.card-canvas.theme-spiral.is-cover .cover-sticker {
+  background: #fff7ed;
+  border: 2px dashed #f97316;
+  border-radius: 6px;
+  filter: drop-shadow(3px 4px 0 rgba(249, 115, 22, 0.18));
+}
+.card-canvas.theme-spiral.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-spiral.is-cover .cover-sticker-layer::after { background: #f97316; border-radius: 2px; }
+
+.card-canvas.theme-newspaper.is-cover .cover-sticker {
+  background: #fdf6e2;
+  border: 2px solid #78350f;
+  border-radius: 2px;
+  filter: grayscale(0.45) sepia(0.25) drop-shadow(3px 4px 0 rgba(120, 53, 15, 0.2));
+}
+.card-canvas.theme-newspaper.is-cover .cover-sticker-layer::before,
+.card-canvas.theme-newspaper.is-cover .cover-sticker-layer::after { background: #78350f; border-radius: 0; }
+
+.card-canvas.theme-cyberpunk.is-cover .cover-sticker {
+  background: rgba(2, 6, 23, 0.92);
+  border: 1px solid #22c55e;
+  border-radius: 4px;
+  filter: drop-shadow(0 0 9px rgba(34, 197, 94, 0.7));
+}
+.card-canvas.theme-cyberpunk.is-cover .cover-sticker--bottom-left { border-color: #a855f7; }
+.card-canvas.theme-cyberpunk.is-cover .cover-sticker--bottom-right { border-color: #38bdf8; }
+.card-canvas.theme-cyberpunk.is-cover .cover-sticker-layer::before { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+.card-canvas.theme-cyberpunk.is-cover .cover-sticker-layer::after { background: #a855f7; box-shadow: 0 0 8px #a855f7; }
+
+.card-canvas.theme-ali-orange.is-cover h1 { max-width: 82%; margin-top: 30px; }
+.card-canvas.theme-ali-orange.is-cover .cover-sticker { background: #fff7ed; border: 2px solid #ff6200; border-radius: 4px 14px 4px 14px; filter: drop-shadow(4px 5px 0 rgba(255,98,0,.2)); }
+.card-canvas.theme-ali-orange.is-cover .cover-sticker-layer::before, .card-canvas.theme-ali-orange.is-cover .cover-sticker-layer::after { background: #ff6200; border-radius: 2px; }
+
+.card-canvas.theme-byte-pulse.is-cover h1 { max-width: 88%; margin-top: 30px; }
+.card-canvas.theme-byte-pulse.is-cover .cover-sticker { background: #111827; border: 2px solid #00a6ff; border-radius: 0; filter: drop-shadow(4px 4px 0 rgba(239,35,60,.45)); }
+.card-canvas.theme-byte-pulse.is-cover .cover-sticker-layer::before { background: #ef233c; border-radius: 0; } .card-canvas.theme-byte-pulse.is-cover .cover-sticker-layer::after { background: #00a6ff; border-radius: 0; }
+
+.card-canvas.theme-macos-window.is-cover h1 { max-width: 88%; margin-top: 24px; }
+.card-canvas.theme-macos-window.is-cover .cover-sticker { background: rgba(255,255,255,.72); border: 1px solid rgba(96,165,250,.5); border-radius: 14px; backdrop-filter: blur(8px); }
+.card-canvas.theme-macos-window.is-cover .cover-sticker-layer::before { background: #34c759; } .card-canvas.theme-macos-window.is-cover .cover-sticker-layer::after { background: #0a84ff; }
+
+.card-canvas.theme-bauhaus.is-cover h1 { max-width: 80%; margin-top: 26px; }
+.card-canvas.theme-bauhaus.is-cover .cover-sticker { background: #fffdf5; border: 2px solid #171717; border-radius: 0; filter: drop-shadow(4px 4px 0 #e63946); }
+.card-canvas.theme-bauhaus.is-cover .cover-sticker-layer::before { background: #f4c430; border-radius: 0; } .card-canvas.theme-bauhaus.is-cover .cover-sticker-layer::after { background: #1d4ed8; border-radius: 0; }
+
+.card-canvas.theme-swiss-grid.is-cover h1 { width: 100%; margin-top: 30px; }
+.card-canvas.theme-swiss-grid.is-cover .cover-sticker { background: #fff; border: 2px solid #ef233c; border-radius: 0; filter: grayscale(.15); }
+.card-canvas.theme-swiss-grid.is-cover .cover-sticker-layer::before, .card-canvas.theme-swiss-grid.is-cover .cover-sticker-layer::after { background: #ef233c; border-radius: 0; }
+
+.card-canvas.theme-riso-jam.is-cover h1 { max-width: 85%; margin-top: 26px; transform: rotate(-1deg); }
+.card-canvas.theme-riso-jam.is-cover .cover-sticker { background: #fff1f2; border: 2px solid #e11d48; border-radius: 10px; filter: drop-shadow(3px 4px 0 rgba(14,165,233,.5)); }
+.card-canvas.theme-riso-jam.is-cover .cover-sticker-layer::before { background: #e11d48; } .card-canvas.theme-riso-jam.is-cover .cover-sticker-layer::after { background: #0ea5e9; }
+
+.card-canvas.theme-y2k-chrome.is-cover h1 { max-width: 88%; margin: 28px auto 18px; text-align: center; }
+.card-canvas.theme-y2k-chrome.is-cover .cover-sticker { background: rgba(255,255,255,.78); border: 2px solid #a78bfa; border-radius: 50%; filter: drop-shadow(0 5px 8px rgba(99,102,241,.24)); }
+.card-canvas.theme-y2k-chrome.is-cover .cover-sticker-layer::before { background: #ec4899; } .card-canvas.theme-y2k-chrome.is-cover .cover-sticker-layer::after { background: #8b5cf6; }
+
+.card-canvas.theme-blueprint.is-cover h1 { max-width: 90%; margin-top: 24px; }
+.card-canvas.theme-blueprint.is-cover .cover-sticker { background: #0c4a6e; border: 1px solid #7dd3fc; border-radius: 0; filter: drop-shadow(0 0 7px rgba(125,211,252,.55)); }
+.card-canvas.theme-blueprint.is-cover .cover-sticker-layer::before { background: #facc15; border-radius: 0; } .card-canvas.theme-blueprint.is-cover .cover-sticker-layer::after { background: #38bdf8; border-radius: 0; }

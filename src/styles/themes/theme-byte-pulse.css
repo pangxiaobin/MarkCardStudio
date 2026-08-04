@@ -1,0 +1,19 @@
+/* 字节节拍：黑白编辑网格与电光蓝 */
+.card-canvas.theme-byte-pulse { background: #f8fafc; background-image: linear-gradient(90deg, rgba(15,23,42,.05) 1px, transparent 1px), linear-gradient(rgba(15,23,42,.05) 1px, transparent 1px); background-size: 24px 24px; color: #111827; border: 1px solid #111827; border-radius: 0; box-shadow: 8px 8px 0 #00a6ff; font-family: "Arial", "PingFang SC", sans-serif; }
+.card-canvas.theme-byte-pulse h1 { color: #111827; font-size: clamp(26px, 5.4cqw, 36px); font-weight: 950; letter-spacing: -.07em; text-transform: uppercase; }
+.card-canvas.theme-byte-pulse h1::after { content: " /"; color: #00a6ff; }
+.card-canvas.theme-byte-pulse .card-h2 { color: #111827; border-top: 4px solid #111827; padding-top: 5px; }
+.card-canvas.theme-byte-pulse .card-h3 { color: #0077b6; }
+.card-canvas.theme-byte-pulse .card-blockquote { border-left: 8px solid #00a6ff; background: #dff4ff; color: #075985; border-radius: 0; font-style: normal; }
+.card-canvas.theme-byte-pulse .list-dot { width: 8px; height: 8px; border-radius: 0; background: #ef233c; }
+.card-canvas.theme-byte-pulse .list-num-badge { background: #111827; color: #fff; border-radius: 0; }
+.card-canvas.theme-byte-pulse .task-badge { border-radius: 0; border: 2px solid #111827; color: #00a6ff; }
+.card-canvas.theme-byte-pulse .task-badge.checked { background: #00a6ff; color: #fff; }
+.card-canvas.theme-byte-pulse mark { background: #fef08a; color: #111827; border-bottom: 3px solid #ef233c; }
+.card-canvas.theme-byte-pulse .card-code-block { background: #111827; color: #dbeafe; border-radius: 0; border-left: 7px solid #00a6ff; }
+.card-canvas.theme-byte-pulse .code-lang-badge { color: #38bdf8; }
+.card-canvas.theme-byte-pulse .inline-code { background: #dbeafe; color: #0369a1; border-radius: 0; }
+.card-canvas.theme-byte-pulse .card-table-wrap { border-radius: 0; border: 2px solid #111827; }
+.card-canvas.theme-byte-pulse .card-table th { background: #111827; color: #fff; }
+.card-canvas.theme-byte-pulse .card-divider { border-top: 4px solid #ef233c; }
+.card-canvas.theme-byte-pulse.is-cover h1 { max-width: 88%; margin-top: 30px; }

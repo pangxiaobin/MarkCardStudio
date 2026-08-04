@@ -1,0 +1,120 @@
+/* 4. 苹果备忘录 (theme-apple-notes) */
+.card-canvas.theme-apple-notes {
+  background-color: #fffde7;
+  background-image: linear-gradient(rgba(234, 179, 8, 0.15) 1px, transparent 1px);
+  background-size: 100% 28px;
+  color: #332d16;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  box-shadow: 0 12px 36px rgba(161, 136, 43, 0.18);
+}
+
+.card-canvas.theme-apple-notes h1 {
+  color: #1f1b0c;
+  font-size: clamp(24px, 5cqw, 30px);
+  font-weight: 800;
+  background: rgba(254, 240, 138, 0.7);
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.2);
+  margin-bottom: 14px;
+}
+
+.card-canvas.theme-apple-notes .card-h2 {
+  color: #854d0e;
+  font-weight: 700;
+  border-bottom: 2.5px solid #eab308;
+  padding-bottom: 3px;
+  display: inline-block;
+}
+
+.card-canvas.theme-apple-notes .card-h3 {
+  color: #a16207;
+  font-weight: 700;
+}
+
+/* Post-it Sticky Note Blockquote */
+.card-canvas.theme-apple-notes .card-blockquote {
+  border-left: 4px solid #ca8a04;
+  background: #fef08a;
+  color: #713f12;
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 2px 4px 12px rgba(161, 136, 43, 0.15);
+  padding: 10px 14px;
+  margin: 10px 0;
+}
+
+/* Apple Notes Round Checkbox */
+.card-canvas.theme-apple-notes .task-badge {
+  border-radius: 50%;
+  border-color: #ca8a04;
+  color: #854d0e;
+}
+
+.card-canvas.theme-apple-notes .task-badge.checked {
+  background: #eab308;
+  color: #ffffff;
+  border-color: #eab308;
+}
+
+.card-canvas.theme-apple-notes mark {
+  background: #fde047;
+  color: #422006;
+  padding: 1px 6px;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(253, 224, 71, 0.7);
+}
+
+.card-canvas.theme-apple-notes .list-dot {
+  background: #ca8a04;
+  width: 7px;
+  height: 7px;
+}
+
+.card-canvas.theme-apple-notes .list-num-badge {
+  background: #fde047;
+  color: #713f12;
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.3);
+}
+
+.card-canvas.theme-apple-notes .card-code-block {
+  background: #282417;
+  color: #fef9c3;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(40, 36, 23, 0.25);
+}
+
+.card-canvas.theme-apple-notes .code-lang-badge {
+  color: #fde047;
+}
+
+.card-canvas.theme-apple-notes .inline-code {
+  background: rgba(234, 179, 8, 0.22);
+  color: #854d0e;
+  font-weight: 600;
+}
+
+.card-canvas.theme-apple-notes .card-table-wrap {
+  border-radius: 10px;
+  border: 1.5px solid rgba(234, 179, 8, 0.4);
+  background: rgba(254, 252, 232, 0.6);
+}
+
+.card-canvas.theme-apple-notes .card-table th {
+  background: rgba(250, 204, 21, 0.35);
+  color: #713f12;
+  font-weight: 800;
+}
+
+.card-canvas.theme-apple-notes .card-table td {
+  border-bottom: 1px dashed rgba(234, 179, 8, 0.3);
+}
+
+.card-canvas.theme-apple-notes .card-divider {
+  border-top: 2px dashed #facc15;
+  opacity: 0.8;
+}

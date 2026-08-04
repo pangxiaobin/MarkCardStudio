@@ -1,0 +1,53 @@
+/* 3. 墨色简报 (theme-ink) */
+.card-canvas.theme-ink {
+  background: linear-gradient(180deg, #263142 0%, #131a25 100%);
+  color: #eef2f8;
+}
+
+.card-canvas.theme-ink h1 { color: #ffffff; }
+
+.card-canvas.theme-ink .card-blockquote {
+  border-left-color: #818cf8;
+  background: rgba(129, 140, 248, 0.12);
+  color: #cbd5e1;
+}
+
+.card-canvas.theme-ink .list-dot { background: #818cf8; }
+
+.card-canvas.theme-ink .list-num { color: #a5b4fc; }
+
+.card-canvas.theme-ink .card-code-block {
+  background: #0b0f19;
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-canvas.theme-ink .code-lang-badge { color: #818cf8; }
+
+.card-canvas.theme-ink .inline-code {
+  background: rgba(129, 140, 248, 0.2);
+  color: #c7d2fe;
+}
+
+.card-canvas.theme-ink .card-table-wrap {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.card-canvas.theme-ink .card-table th {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.card-canvas.theme-ink .card-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.card-canvas.theme-ink .card-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.theme-ink .hljs-keyword { color: #ff79c6; }
+.theme-ink .hljs-string { color: #50fa7b; }
+.theme-ink .hljs-comment { color: #6272a4; }
+.theme-ink .hljs-number { color: #bd93f9; }
+.theme-ink .hljs-function { color: #8be9fd; }

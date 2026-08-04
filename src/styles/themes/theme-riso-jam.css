@@ -1,0 +1,19 @@
+/* Riso 果酱：套色错位与纸张颗粒 */
+.card-canvas.theme-riso-jam { background: #fff7f2; color: #4a1732; border: 3px solid #e11d48; border-radius: 8px; box-shadow: 7px 7px 0 #f59e0b, 0 18px 30px rgba(190,24,93,.15); font-family: "Trebuchet MS", "PingFang SC", sans-serif; }
+.card-canvas.theme-riso-jam::before { content: ""; position: absolute; inset: 0; opacity: .13; pointer-events: none; background-image: radial-gradient(#be123c .65px, transparent .65px); background-size: 4px 4px; }
+.card-canvas.theme-riso-jam h1 { color: #be123c; font-weight: 900; text-shadow: 3px 2px 0 rgba(14,165,233,.35); }
+.card-canvas.theme-riso-jam .card-h2 { color: #9d174d; background: #fbcfe8; display: inline-block; padding: 4px 10px; transform: rotate(-1deg); }
+.card-canvas.theme-riso-jam .card-h3 { color: #0369a1; }
+.card-canvas.theme-riso-jam .card-blockquote { border-left: 5px solid #0ea5e9; background: #e0f2fe; color: #075985; border-radius: 0 10px 10px 0; }
+.card-canvas.theme-riso-jam .list-dot { background: #e11d48; }
+.card-canvas.theme-riso-jam .list-num-badge { background: #0ea5e9; color: #fff; border-radius: 5px; }
+.card-canvas.theme-riso-jam .task-badge { border-color: #e11d48; color: #e11d48; }
+.card-canvas.theme-riso-jam .task-badge.checked { background: #e11d48; color: white; }
+.card-canvas.theme-riso-jam mark { background: #fde68a; color: #881337; padding: 2px 5px; }
+.card-canvas.theme-riso-jam .card-code-block { background: #4a1732; color: #fce7f3; border-radius: 5px; border: 2px solid #0ea5e9; }
+.card-canvas.theme-riso-jam .code-lang-badge { color: #f9a8d4; }
+.card-canvas.theme-riso-jam .inline-code { background: #fbcfe8; color: #9d174d; }
+.card-canvas.theme-riso-jam .card-table-wrap { border: 2px solid #e11d48; border-radius: 6px; }
+.card-canvas.theme-riso-jam .card-table th { background: #e11d48; color: white; }
+.card-canvas.theme-riso-jam .card-divider { border-top: 3px dashed #0ea5e9; }
+.card-canvas.theme-riso-jam.is-cover h1 { max-width: 85%; margin-top: 26px; transform: rotate(-1deg); }

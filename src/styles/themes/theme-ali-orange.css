@@ -1,0 +1,26 @@
+/* 阿里橙：暖橙品牌发布会视觉 */
+.card-canvas.theme-ali-orange {
+  background: #fffaf5;
+  color: #3b2114;
+  border: 3px solid #ff6200;
+  border-radius: 4px 22px 4px 22px;
+  box-shadow: 10px 10px 0 #ffd8bf, 0 18px 35px rgba(194, 65, 12, .16);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.card-canvas.theme-ali-orange::before { content: ""; position: absolute; width: 120px; height: 120px; right: -42px; top: -46px; background: #ff6200; border-radius: 50%; opacity: .12; }
+.card-canvas.theme-ali-orange h1 { color: #c2410c; font-weight: 900; letter-spacing: -.04em; border-left: 10px solid #ff6200; padding-left: 12px; }
+.card-canvas.theme-ali-orange .card-h2 { color: #ea580c; border-bottom: 3px solid #ff6200; padding-bottom: 3px; }
+.card-canvas.theme-ali-orange .card-h3 { color: #9a3412; }
+.card-canvas.theme-ali-orange .card-blockquote { border-left: 6px solid #ff6200; background: #fff0e6; color: #9a3412; border-radius: 0 16px 16px 0; }
+.card-canvas.theme-ali-orange .list-dot { background: #ff6200; border-radius: 1px; transform: rotate(45deg); }
+.card-canvas.theme-ali-orange .list-num-badge { background: #ff6200; color: #fff; border-radius: 3px; }
+.card-canvas.theme-ali-orange .task-badge { border-radius: 3px; border-color: #ff6200; color: #ea580c; }
+.card-canvas.theme-ali-orange .task-badge.checked { background: #ff6200; color: #fff; }
+.card-canvas.theme-ali-orange mark { background: #fed7aa; color: #9a3412; padding: 1px 5px; }
+.card-canvas.theme-ali-orange .card-code-block { background: #29150c; color: #ffedd5; border: 2px solid #fb923c; border-radius: 3px; }
+.card-canvas.theme-ali-orange .code-lang-badge { color: #fb923c; }
+.card-canvas.theme-ali-orange .inline-code { background: #ffedd5; color: #c2410c; }
+.card-canvas.theme-ali-orange .card-table-wrap { border: 2px solid #fdba74; border-radius: 3px; }
+.card-canvas.theme-ali-orange .card-table th { background: #ff6200; color: white; }
+.card-canvas.theme-ali-orange .card-divider { border-top: 3px solid #ff6200; }
+.card-canvas.theme-ali-orange.is-cover h1 { max-width: 82%; margin-top: 30px; font-size: clamp(25px, 5.3cqw, 34px); }

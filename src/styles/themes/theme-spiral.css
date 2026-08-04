@@ -1,0 +1,128 @@
+/* 6. 线圈笔记本 (theme-spiral) */
+.card-canvas.theme-spiral {
+  background-color: #fffdfa;
+  background-image:
+    linear-gradient(to right, rgba(239, 68, 68, 0.25) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(203, 213, 225, 0.35) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 24px;
+  background-position: 36px 0, 0 0;
+  color: #1e293b;
+  padding-left: 48px;
+  border-left: 14px solid #334155;
+  border-radius: 4px 18px 18px 4px;
+  box-shadow: -6px 0 16px rgba(0, 0, 0, 0.2), 0 16px 36px rgba(0, 0, 0, 0.14);
+}
+
+/* Spiral Ring Holes Effect on Left Edge */
+.card-canvas.theme-spiral::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 16px;
+  bottom: 16px;
+  width: 18px;
+  background-image: radial-gradient(circle at center, #0f172a 35%, #94a3b8 40%, transparent 70%);
+  background-size: 18px 28px;
+  background-repeat: repeat-y;
+  z-index: 10;
+}
+
+/* Washi Tape (胶带) Accent on H1 */
+.card-canvas.theme-spiral h1 {
+  color: #0f172a;
+  font-family: inherit;
+  margin-top: 8px;
+  background: rgba(254, 215, 170, 0.85);
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 2px;
+  transform: rotate(-1deg);
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.08);
+}
+
+.card-canvas.theme-spiral .card-h2 {
+  color: #c2410c;
+  background: rgba(255, 237, 213, 0.7);
+  display: inline-block;
+  padding: 2px 8px;
+  border-bottom: 2px dashed #f97316;
+}
+
+.card-canvas.theme-spiral .card-h3 {
+  color: #ea580c;
+  font-weight: 700;
+}
+
+/* Memo Sticky Note Blockquote */
+.card-canvas.theme-spiral .card-blockquote {
+  border-left: 4px solid #f97316;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 4px;
+  box-shadow: 2px 4px 10px rgba(249, 115, 22, 0.12);
+  padding: 10px 14px;
+}
+
+/* Hand-drawn style square task checkboxes */
+.card-canvas.theme-spiral .task-badge {
+  border-radius: 3px;
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.card-canvas.theme-spiral .task-badge.checked {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.card-canvas.theme-spiral mark {
+  background: #fed7aa;
+  color: #7c2d12;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.card-canvas.theme-spiral .list-dot {
+  background: #f97316;
+  border-radius: 2px;
+}
+
+.card-canvas.theme-spiral .list-num-badge {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1.5px dashed #f97316;
+  border-radius: 4px;
+  font-weight: 900;
+}
+
+.card-canvas.theme-spiral .card-code-block {
+  background: #1e293b;
+  color: #ffedd5;
+  border-radius: 8px;
+  border: 1px dashed rgba(249, 115, 22, 0.4);
+}
+
+.card-canvas.theme-spiral .code-lang-badge {
+  color: #fb923c;
+}
+
+.card-canvas.theme-spiral .inline-code {
+  background: #ffedd5;
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.card-canvas.theme-spiral .card-table-wrap {
+  border: 1px solid #fed7aa;
+  background: #fffdfa;
+}
+
+.card-canvas.theme-spiral .card-table th {
+  background: #ffedd5;
+  color: #9a3412;
+  font-weight: 800;
+}
+
+.card-canvas.theme-spiral .card-divider {
+  border-top: 2px dashed #cbd5e1;
+}

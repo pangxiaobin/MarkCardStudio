@@ -1,0 +1,37 @@
+/* 2. 清新绿洲 (theme-fresh) */
+.card-canvas.theme-fresh {
+  background: linear-gradient(180deg, #f7fff6 0%, #e6f7ee 100%);
+  color: #1c3d2b;
+}
+
+.card-canvas.theme-fresh h1 { color: #0d2e1c; }
+
+.card-canvas.theme-fresh .card-blockquote {
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.card-canvas.theme-fresh .list-dot { background: #10b981; }
+
+.card-canvas.theme-fresh .list-num { color: #059669; }
+
+.card-canvas.theme-fresh .card-code-block {
+  background: #11261b;
+  color: #e6f7ee;
+}
+
+.card-canvas.theme-fresh .code-lang-badge { color: #34d399; }
+
+.card-canvas.theme-fresh .inline-code {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.card-canvas.theme-fresh .card-table th {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+}
+
+.card-canvas.theme-fresh .card-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.5);
+}
