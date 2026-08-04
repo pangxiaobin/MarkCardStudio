@@ -3,8 +3,9 @@ export const APP_INFO = {
   version: "0.1.0",
   license: "GNU GPL v3.0",
   author: {
-    name: "",
-    website: "",
-    email: "",
+    name: "xiaobin",
+    github: "https://github.com/pangxiaobin/MarkCardStudio",
+    website: "https://markcard.woollypix.cn/",
+    email: "markcard@woollypix.cn",
   },
 };

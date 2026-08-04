@@ -1,6 +1,8 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { isTauri } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { APP_INFO } from "../config/appInfo.js";
 import { useAppPreferences } from "../i18n/index.js";
 import AppIcon from "./AppIcon.vue";
@@ -32,7 +34,13 @@ let previouslyFocusedElement = null;
 const sections = computed(() => [
   { id: "general", label: t("settingsDialog.general"), icon: "settings" },
   { id: "about", label: t("settingsDialog.about"), icon: "info" },
+  { id: "support", label: t("settingsDialog.support"), icon: "heart-handshake" },
 ]);
+
+const activeSectionTitle = computed(() => {
+  const section = sections.value.find((item) => item.id === activeSection.value);
+  return section?.label ?? t("settingsDialog.general");
+});
 
 const languageOptions = computed(() => [
   { value: "system", label: t("settingsDialog.followSystem") },
@@ -53,9 +61,29 @@ const appearanceOptions = computed(() => [
 
 const authorDetails = computed(() => [
   { label: t("settingsDialog.author"), value: APP_INFO.author.name },
-  { label: t("settingsDialog.website"), value: APP_INFO.author.website },
-  { label: t("settingsDialog.email"), value: APP_INFO.author.email },
+  {
+    label: t("settingsDialog.github"),
+    value: APP_INFO.author.github,
+    href: APP_INFO.author.github,
+  },
+  {
+    label: t("settingsDialog.website"),
+    value: APP_INFO.author.website,
+    href: APP_INFO.author.website,
+  },
+  {
+    label: t("settingsDialog.email"),
+    value: APP_INFO.author.email,
+    href: APP_INFO.author.email ? `mailto:${APP_INFO.author.email}` : "",
+  },
 ].filter((item) => item.value));
+
+async function openDetailLink(event, href) {
+  if (!isTauri()) return;
+
+  event.preventDefault();
+  await openUrl(href);
+}
 
 function close() {
   isLanguageDropdownOpen.value = false;
@@ -207,7 +235,7 @@ onBeforeUnmount(() => {
         <div class="flex min-w-0 flex-col bg-white dark:bg-slate-900">
           <header class="flex h-14 shrink-0 items-center justify-between border-b border-slate-200/80 px-6 dark:border-slate-800">
             <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">
-              {{ activeSection === "general" ? t("settingsDialog.general") : t("settingsDialog.about") }}
+              {{ activeSectionTitle }}
             </h2>
             <button
               ref="closeButtonRef"
@@ -319,7 +347,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- About Section -->
-            <div v-else class="space-y-6">
+            <div v-else-if="activeSection === 'about'" class="space-y-6">
               <section class="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/50">
                 <span class="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/50 dark:bg-slate-900 dark:ring-slate-700/50">
                   <img src="/logo.png" :alt="APP_INFO.name" width="48" height="48" />
@@ -341,9 +369,58 @@ onBeforeUnmount(() => {
                 </div>
                 <div v-for="detail in authorDetails" :key="detail.label" class="flex items-center justify-between gap-4 px-4 py-3 text-sm">
                   <dt class="text-slate-500 dark:text-slate-400">{{ detail.label }}</dt>
-                  <dd class="truncate text-slate-800 dark:text-slate-100 font-medium">{{ detail.value }}</dd>
+                  <dd class="min-w-0 truncate text-slate-800 dark:text-slate-100 font-medium">
+                    <a
+                      v-if="detail.href"
+                      :href="detail.href"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-blue-600 underline decoration-blue-300 underline-offset-2 transition-colors hover:text-blue-700 dark:text-blue-400 dark:decoration-blue-700 dark:hover:text-blue-300"
+                      :title="detail.value"
+                      @click="openDetailLink($event, detail.href)"
+                    >
+                      {{ detail.value }}
+                    </a>
+                    <template v-else>{{ detail.value }}</template>
+                  </dd>
                 </div>
               </dl>
+            </div>
+
+            <!-- Support Section -->
+            <div v-else class="space-y-5">
+              <header>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ t("settingsDialog.supportTitle") }}</h3>
+                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ t("settingsDialog.supportDescription") }}</p>
+              </header>
+
+              <div class="grid grid-cols-[160px_minmax(0,1fr)] gap-4">
+                <section class="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ t("settingsDialog.donation") }}</h4>
+                  <p class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{{ t("settingsDialog.donationDescription") }}</p>
+                  <img
+                    src="/wx_sponsor.webp"
+                    :alt="t('settingsDialog.donationQrAlt')"
+                    width="828"
+                    height="828"
+                    class="mt-3 aspect-square w-full rounded-lg object-cover"
+                  />
+                </section>
+
+                <section class="flex min-w-0 flex-col rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ t("settingsDialog.wechatOfficialAccount") }}</h4>
+                  <p class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{{ t("settingsDialog.wechatDescription") }}</p>
+                  <div class="mt-3 flex flex-1 items-center">
+                    <img
+                      src="/wx.webp"
+                      :alt="t('settingsDialog.wechatQrAlt')"
+                      width="2694"
+                      height="910"
+                      class="w-full rounded-lg object-contain"
+                    />
+                  </div>
+                </section>
+              </div>
             </div>
           </main>
         </div>
