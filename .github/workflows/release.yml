@@ -27,7 +27,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -59,26 +59,65 @@ jobs:
 
       - name: Create or update draft release
         id: release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         with:
           script: |
             const { owner, repo } = context.repo;
             const tag = process.env.RELEASE_TAG;
-            const body = `## Downloads / 下载说明
-
-            - **Windows:** download the \`.msi\` or \`-setup.exe\` installer.  
-              **Windows：**下载 \`.msi\` 或 \`-setup.exe\` 安装包。
-            - **macOS Apple Silicon:** download the \`aarch64.dmg\` file for M-series chips.  
-              **macOS Apple 芯片：**M 系列芯片请下载 \`aarch64.dmg\`。
-            - **macOS Intel:** download the \`x64.dmg\` file.  
-              **macOS Intel 芯片：**请下载 \`x64.dmg\`。
-            - **Linux:** download the \`.AppImage\` or \`.deb\` package.  
-              **Linux：**下载 \`.AppImage\` 或 \`.deb\` 安装包。
-
-            macOS packages are currently unsigned. If Gatekeeper blocks the app, allow it in **System Settings > Privacy & Security**.  
-            macOS 安装包目前未签名。如被 Gatekeeper 阻止，请前往**系统设置 > 隐私与安全性**允许打开。`;
+            const releaseNotes = {
+              "v0.1.0": [
+                "### 首个公开版本 / Initial Release",
+                "",
+                "- 支持 Markdown 实时预览、智能分页和页面排序。",
+                "- 内置 16 套卡片主题及小红书、抖音、微博、方形等尺寸预设。",
+                "- 支持代码高亮、KaTeX 公式、Mermaid 图表、表格、脚注和本地图片。",
+                "- 支持导出 PNG、JPG、多页 PDF 和长图 PNG。",
+                "- 提供中英文界面、明暗模式、本地文档读写和草稿恢复。",
+                "",
+                "---",
+                "",
+                "- Live Markdown preview with smart pagination and page reordering.",
+                "- 16 built-in themes with presets for Xiaohongshu, Douyin, Weibo, and square cards.",
+                "- Rich content support including syntax highlighting, KaTeX, Mermaid, tables, footnotes, and local images.",
+                "- Export to PNG, JPG, multipage PDF, and long PNG.",
+                "- English and Simplified Chinese UI, light/dark modes, local document access, and draft recovery.",
+              ].join("\n"),
+            };
+            const changes = releaseNotes[tag]
+              || "See the commit history for changes in this release. / 本版本变更请查看提交记录。";
+            const body = [
+              "## 更新内容 / What's New",
+              "",
+              changes,
+              "",
+              "## 下载说明 / Downloads",
+              "",
+              "| 系统 / OS | 处理器 / Architecture | 下载文件 / Package |",
+              "| --- | --- | --- |",
+              "| Windows | x64 | `.msi` 或 / or `-setup.exe` |",
+              "| macOS | Apple Silicon（M 系列 / M-series） | `aarch64.dmg` |",
+              "| macOS | Intel | `x64.dmg` |",
+              "| Linux | x64 | `.AppImage` 或 / or `.deb` |",
+              "",
+              "## macOS 首次启动 / First Launch on macOS",
+              "",
+              "macOS 安装包目前未签名。请先将应用拖入“应用程序”文件夹。如果系统阻止打开，请前往 **系统设置 > 隐私与安全性**，选择仍要打开。",
+              "",
+              "如果仍无法启动，请打开“终端”并执行：",
+              "",
+              "```bash",
+              "xattr -rd com.apple.quarantine /Applications/markcardstudio.app",
+              "```",
+              "",
+              "macOS packages are currently unsigned. Drag the app into the **Applications** folder first. If Gatekeeper blocks it, go to **System Settings > Privacy & Security** and choose **Open Anyway**.",
+              "",
+              "If the app is still blocked, open Terminal and run the command above.",
+              "",
+              "> 该命令仅移除 MarkCard Studio 应用的隔离属性，请确认应用下载自本项目的官方 GitHub Releases 页面。",
+              "> This command only removes the quarantine attribute from MarkCard Studio. Make sure the app was downloaded from this project's official GitHub Releases page.",
+            ].join("\n");
 
             let release;
             try {
@@ -138,7 +177,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -150,9 +189,9 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 22.12.0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -166,7 +205,7 @@ jobs:
         run: echo "store_path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-cache.outputs.store_path }}
           key: ${{ runner.os }}-${{ matrix.target }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -203,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
         with:

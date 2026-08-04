@@ -4,7 +4,8 @@
   <p><strong>Turn Markdown into polished, publish-ready social media cards.</strong></p>
   <p>
     <a href="README.md">English</a> |
-    <a href="README.zh-CN.md">简体中文</a>
+    <a href="README.zh-CN.md">简体中文</a> |
+    <a href="https://markcard.woollypix.cn/">Official Website</a>
   </p>
   <p>
     <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-6d28d9" />
@@ -74,7 +75,7 @@ The files in [`imgs/EN`](imgs/EN) are real card exports produced by MarkCard Stu
 
 ### Prerequisites
 
-- Node.js 18 or newer
+- Node.js 22.12.0 or newer (the release workflow uses 22.12.0)
 - [pnpm](https://pnpm.io/)
 - For the desktop app: a Rust toolchain and the [Tauri 2 system prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system
 

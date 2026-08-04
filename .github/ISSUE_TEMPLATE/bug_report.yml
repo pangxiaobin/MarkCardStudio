@@ -1,0 +1,85 @@
+name: Bug report / 错误报告
+description: Report a reproducible problem in MarkCard Studio / 报告可复现的问题
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve MarkCard Studio. Please remove private content from screenshots and sample documents.
+
+        感谢你帮助改进 MarkCard Studio。请先从截图和示例文档中移除隐私内容。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting / 提交前确认
+      options:
+        - label: I searched existing issues and did not find a duplicate. / 我已搜索现有 Issue，未发现重复问题。
+          required: true
+        - label: I am using the latest available version. / 我正在使用当前可用的最新版本。
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / 版本
+      description: Find this in the About dialog or release name. / 可在“关于”对话框或 Release 名称中查看。
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system / 操作系统
+      options:
+        - Windows
+        - macOS Apple Silicon
+        - macOS Intel
+        - Linux
+        - Browser development mode / 浏览器开发模式
+        - Other / 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description / 问题描述
+      description: Describe what happened and what you expected. / 请说明实际结果和预期结果。
+      placeholder: What happened? What did you expect instead? / 发生了什么？预期应该怎样？
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      placeholder: |
+        1. Open ... / 打开……
+        2. Select ... / 选择……
+        3. Export ... / 导出……
+        4. See the error / 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample Markdown / 示例 Markdown
+      description: Provide the smallest document that reproduces the issue, if applicable. / 如适用，请提供能复现问题的最小文档。
+      render: markdown
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots / 日志与截图
+      description: Drag files here and include relevant console or terminal output. / 可将文件拖到这里，并附上相关控制台或终端输出。
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context / 补充信息
+      description: Include export format, theme, platform preset, or other relevant settings. / 可补充导出格式、主题、平台尺寸及其他相关设置。

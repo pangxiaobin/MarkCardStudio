@@ -4,7 +4,8 @@
   <p><strong>把 Markdown 变成精美、可直接发布的社交媒体卡片。</strong></p>
   <p>
     <a href="README.md">English</a> |
-    <a href="README.zh-CN.md">简体中文</a>
+    <a href="README.zh-CN.md">简体中文</a> |
+    <a href="https://markcard.woollypix.cn/">官方网站</a>
   </p>
   <p>
     <img alt="版本" src="https://img.shields.io/badge/version-0.1.0-6d28d9" />
@@ -79,7 +80,7 @@ MarkCard Studio 是一款面向内容创作者和知识分享者的本地优先�
 
 ### 环境要求
 
-- Node.js 18 或更高版本
+- Node.js 22.12.0 或更高版本（发布工作流使用 22.12.0）
 - [pnpm](https://pnpm.io/)
 - 运行桌面端还需要 Rust 工具链，以及当前操作系统对应的 [Tauri 2 系统依赖](https://v2.tauri.app/start/prerequisites/)
 

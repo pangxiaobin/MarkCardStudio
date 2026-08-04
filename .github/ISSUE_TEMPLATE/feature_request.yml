@@ -1,0 +1,50 @@
+name: Feature request / 功能建议
+description: Suggest an improvement for MarkCard Studio / 提议改进 MarkCard Studio
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your idea. Please describe the authoring problem first so the proposed solution has clear context.
+
+        感谢你的建议。请先描述创作过程中遇到的问题，以便明确功能方案的使用场景。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting / 提交前确认
+      options:
+        - label: I searched existing issues and did not find the same request. / 我已搜索现有 Issue，未发现相同建议。
+          required: true
+        - label: This request relates to the Markdown-to-card authoring workflow. / 此建议与 Markdown 卡片创作流程相关。
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case / 问题或使用场景
+      description: What are you trying to accomplish, and what is difficult today? / 你想完成什么？当前有什么困难？
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution / 建议方案
+      description: Describe how you expect the feature to work. / 请描述你期望该功能如何工作。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / 考虑过的替代方案
+      description: Share any current workaround or alternative design. / 请说明当前的替代做法或其他设计思路。
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context / 补充信息
+      description: Add examples, mockups, screenshots, or links that clarify the request. / 可添加示例、设计稿、截图或相关链接。
