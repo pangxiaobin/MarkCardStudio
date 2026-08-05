@@ -152,3 +152,7 @@ The bundled OpenMoji stickers are provided by [OpenMoji](https://openmoji.org/) 
 ## License
 
 MarkCard Studio is free software licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, modify, and redistribute it under the terms of that license.
+
+## Community
+
+- Friendly community: [linux.do](https://linux.do)
