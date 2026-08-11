@@ -119,7 +119,6 @@ const { exportCurrentPage } = useCardExport({
   pages,
   sourcePath,
   selectedPlatform,
-  canvasRef: previewPanelRef,
   exportMessage,
   scale,
   selectedFormat,

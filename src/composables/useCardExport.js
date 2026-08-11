@@ -1,13 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getFontEmbedCSS, toCanvas } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { nextTick } from "vue";
-import { getCardLayoutClass, parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "./useContentParser.js";
-import { getCoverStickers } from "../config/coverStickers.js";
+import { createApp, nextTick } from "vue";
+import CardArtwork from "../components/preview/CardArtwork.vue";
+import { renderMermaidDiagrams } from "./useContentParser.js";
 import { i18n } from "../i18n/index.js";
 
 function t(key, params) {
   return i18n.global.t(key, params);
+}
+
+function isTauriRuntime() {
+  return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
 export function useCardExport({
@@ -15,7 +19,6 @@ export function useCardExport({
   pages,
   sourcePath,
   selectedPlatform,
-  canvasRef,
   exportMessage,
   scale,
   selectedFormat,
@@ -58,7 +61,7 @@ export function useCardExport({
       ? [allPages[activePageIndex.value] || allPages[0]]
       : allPages;
 
-    if (!targetFolder) {
+    if (!targetFolder && isTauriRuntime()) {
       exportMessage.value = t("runtime.chooseExportFolder");
       try {
         const selectedFolder = await invoke("pick_export_folder");
@@ -100,6 +103,11 @@ export function useCardExport({
       throw new Error(t("runtime.binaryFailed"));
     }
 
+    if (!isTauriRuntime()) {
+      downloadBlob(blob, filename);
+      return null;
+    }
+
     try {
       const savedPath = await invoke("save_export_file", {
         folderPath: targetFolder || "",
@@ -112,8 +120,7 @@ export function useCardExport({
       throw new Error(t("runtime.writeFailed", { error: err?.message || err }));
     }
 
-    downloadBlob(blob, filename);
-    return null;
+    throw new Error(t("runtime.writeFailed", { error: "No output path returned" }));
   }
 
   async function exportAsImages(pageList, platform, quality, themeClass, isTransparent, bgHex, bgType, bgVal, ext, targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight) {
@@ -187,7 +194,10 @@ export function useCardExport({
         i + 1,
         pageList.length
       );
-      if (canvas) canvases.push(canvas);
+      if (!canvas) {
+        throw new Error(t("runtime.renderFailed", { page: i + 1 }));
+      }
+      canvases.push(canvas);
     }
 
     if (!canvases.length) {
@@ -203,15 +213,17 @@ export function useCardExport({
     masterCanvas.height = totalH;
     const ctx = masterCanvas.getContext("2d");
 
-    if (ctx) {
-      if (!isTransparent) {
-        ctx.fillStyle = bgHex;
-        ctx.fillRect(0, 0, singleW, totalH);
-      }
+    if (!ctx || masterCanvas.width !== singleW || masterCanvas.height !== totalH) {
+      throw new Error(t("runtime.longImageFailed"));
+    }
 
-      for (let i = 0; i < canvases.length; i++) {
-        ctx.drawImage(canvases[i], 0, i * singleH);
-      }
+    if (!isTransparent) {
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(0, 0, singleW, totalH);
+    }
+
+    for (let i = 0; i < canvases.length; i++) {
+      ctx.drawImage(canvases[i], 0, i * singleH);
     }
 
     const blob = await canvasToBlob(masterCanvas, "image/png", 1.0);
@@ -359,101 +371,33 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
   container.style.overflow = "hidden";
   document.body.appendChild(container);
 
-  const posterNode = document.createElement("div");
-  posterNode.className = "poster-canvas-frame relative flex flex-col justify-between p-5 overflow-hidden rounded-2xl h-full w-full";
-  posterNode.style.width = `${baseWidth}px`;
-  posterNode.style.height = `${baseHeight}px`;
-  posterNode.style.margin = "0";
-  posterNode.style.boxSizing = "border-box";
-
-  if (!isTransparent || ext === "jpg") {
-    if (bgType === "solid") {
-      posterNode.style.backgroundColor = bgVal || bgHex || "#69eacb";
-      posterNode.style.backgroundImage = "none";
-      posterNode.style.background = bgVal || bgHex || "#69eacb";
-    } else if (bgType === "gradient" || bgType === "pattern") {
-      posterNode.style.backgroundImage = bgVal;
-      posterNode.style.background = bgVal;
-    } else if (bgType === "image" || bgType === "wallpaper") {
-      if (bgVal?.startsWith("data:") || bgVal?.startsWith("http") || bgVal?.startsWith("blob:") || bgVal?.startsWith("/")) {
-        posterNode.style.backgroundImage = `url('${bgVal}')`;
-        posterNode.style.backgroundSize = "cover";
-        posterNode.style.backgroundPosition = "center";
-        posterNode.style.backgroundRepeat = "no-repeat";
-      } else {
-        posterNode.style.backgroundImage = bgVal;
-        posterNode.style.background = bgVal;
-      }
-    } else {
-      posterNode.style.backgroundColor = bgHex || "#69eacb";
-      posterNode.style.backgroundImage = "none";
-    }
-  } else {
-    posterNode.style.background = "transparent";
-    posterNode.style.backgroundColor = "transparent";
-  }
-
-  const cardNode = document.createElement("article");
-  // Keep this class list in sync with PreviewArtworkCard. Layout-only utility
-  // differences here change flex distribution and make export diverge from
-  // what the user sees in the preview.
-  const isCover = Boolean(page?.cover);
-  const cardLayoutClass = getCardLayoutClass(width, height);
-  cardNode.className = `card-canvas ${themeClass} ${cardLayoutClass} ${isCover ? "is-cover" : ""} group/card relative flex-1 flex flex-col h-full w-full rounded-xl overflow-hidden shadow-md border border-black/5 dark:border-white/10`;
-  cardNode.style.margin = "0";
-  cardNode.style.boxSizing = "border-box";
-
-  const blocks = page?.blocks ?? parseBlocks(page?.bodyMarkdown?.split("\n") ?? page?.body ?? []);
-  const bodyHtml = renderBlocksToHtml(blocks);
-  const stickerHtml = isCover ? renderCoverStickerHtml(themeClass) : "";
-
-  const quote = page?.quote || t("runtime.defaultQuote");
-  const now = new Date();
-  const defaultDate = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, "0")}.${String(now.getDate()).padStart(2, "0")}`;
-  const displayDate = page?.date || defaultDate;
-
-  if (isTopLeft || isTopRight) {
-    const headerNode = document.createElement("div");
-    headerNode.className = "poster-header z-10 flex items-center justify-between text-xs font-semibold px-1 pb-2 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]";
-    const kickerHtml = isTopLeft ? `<span class="inline-flex items-center rounded-md bg-black/10 dark:bg-white/15 px-2 py-0.5 text-[11px] font-bold backdrop-blur-xs tracking-wide">${page?.kicker || "@MarkCard"}</span>` : "";
-    const pageNumStr = `${String(pageNum).padStart(2, "0")} / ${String(totalPages || 1).padStart(2, "0")}`;
-    const pageNumHtml = isTopRight ? `<div class="text-[11px] font-mono font-bold opacity-80">${pageNumStr}</div>` : "";
-    headerNode.innerHTML = `
-      <div class="flex items-center gap-1.5">${kickerHtml}</div>
-      ${pageNumHtml}
-    `;
-    posterNode.appendChild(headerNode);
-  }
-
-  const titleHtml = (!page?.isOverflow && page?.title) ? `<h1>${page.title}</h1>` : "";
-
-  cardNode.innerHTML = `
-    <div class="leaf-shadow top"></div>
-    <div class="leaf-shadow side"></div>
-    ${stickerHtml}
-    <div class="card-scroll-area">
-      ${titleHtml}
-      <div class="card-body">
-        ${bodyHtml}
-      </div>
-    </div>
-  `;
-  posterNode.appendChild(cardNode);
-
-  if (isBottomLeft || isBottomRight) {
-    const footerNode = document.createElement("div");
-    footerNode.className = "poster-footer z-10 flex items-center justify-between text-xs pt-2.5 px-1 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]";
-    const dateHtml = isBottomLeft ? `<div class="font-mono text-[11px] opacity-85 shrink-0"><span>${displayDate}</span></div>` : "<div></div>";
-    const quoteHtml = isBottomRight ? `<strong class="truncate text-right font-medium text-[11px] max-w-[70%] opacity-90">${quote}</strong>` : "";
-    footerNode.innerHTML = `
-      ${dateHtml}
-      ${quoteHtml}
-    `;
-    posterNode.appendChild(footerNode);
-  }
-  container.appendChild(posterNode);
+  const exportApp = createApp(CardArtwork, {
+    page,
+    pageIndex: Math.max(0, pageNum - 1),
+    pagesLength: totalPages,
+    selectedPlatform: { width, height },
+    selectedThemeClass: themeClass,
+    transparentBackground: isTransparent && ext !== "jpg",
+    backgroundColor: bgHex,
+    backgroundType: bgType,
+    backgroundValue: bgVal,
+    showPageNumber: isTopRight,
+    showTopLeft: isTopLeft,
+    showTopRight: isTopRight,
+    showBottomLeft: isBottomLeft,
+    showBottomRight: isBottomRight,
+    autoPrepare: false,
+  });
+  exportApp.use(i18n);
+  exportApp.mount(container);
+  const posterNode = container.querySelector(".poster-canvas-frame");
 
   try {
+    if (!posterNode) throw new Error(t("runtime.renderFailed", { page: pageNum }));
+    if (page?.blocks?.some((block) => block?.oversize)) {
+      throw new Error(t("runtime.renderFailed", { page: pageNum }));
+    }
+    await nextTick();
     await renderMermaidDiagrams(posterNode);
     if (document.fonts?.ready) {
       await document.fonts.ready;
@@ -464,13 +408,22 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     // sources again while cloning; that second fetch is unreliable in the
     // Tauri WebView (especially for remote URLs) and can result in a blank
     // image in the exported PNG even though the preview displays it.
-    await inlineImagesForExport(posterNode);
+    await inlineImagesForExport(posterNode, renderPixelRatio);
+    await inlineBackgroundImagesForExport(posterNode);
     await rasterizeCoverStickersForExport(posterNode);
 
     // Ensure all images (content images, stickers, math formula PNGs, mermaid diagrams)
     // are 100% loaded and decoded in bitmap memory before canvas capture
     const allImages = Array.from(posterNode.querySelectorAll("img"));
-    await Promise.all(allImages.map((img) => waitForImageDecode(img)));
+    const decodedImages = await Promise.all(allImages.map((img) => waitForImageDecode(img)));
+    if (decodedImages.some((decoded) => !decoded)) {
+      throw new Error(t("runtime.binaryFailed"));
+    }
+
+    const scrollArea = posterNode.querySelector(".card-scroll-area");
+    if (scrollArea && scrollArea.scrollHeight > scrollArea.clientHeight + 1) {
+      throw new Error(t("runtime.renderFailed", { page: pageNum }));
+    }
 
     // Let the browser settle fonts, CSS, and GPU texture uploads (prevents first-export blank images)
     await new Promise((r) => setTimeout(r, 250));
@@ -492,21 +445,16 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     if (fontEmbedCSS) captureOptions.fontEmbedCSS = fontEmbedCSS;
 
     const canvas = await toCanvas(posterNode, captureOptions);
+    compositeContentImages(canvas, posterNode);
+    exportApp.unmount();
     container.remove();
     return canvas;
   } catch (err) {
     console.error("html-to-image render error:", err);
+    exportApp.unmount();
     container.remove();
     return null;
   }
-}
-
-function renderCoverStickerHtml(themeClass) {
-  const stickers = getCoverStickers(themeClass);
-  const images = stickers
-    .map((sticker) => `<img src="${sticker.src}" alt="" class="cover-sticker cover-sticker--${sticker.position}" loading="eager" />`)
-    .join("");
-  return `<div class="cover-sticker-layer" aria-hidden="true">${images}</div>`;
 }
 
 /**
@@ -613,36 +561,39 @@ function convertImageElementToDataUrl(img) {
  * export DOM. Local images are already data URLs, while remote/blob images are
  * fetched once here so the clone step does not depend on WebView networking.
  */
-async function inlineImagesForExport(root) {
+async function inlineImagesForExport(root, renderPixelRatio) {
   const imgEls = Array.from(root.querySelectorAll("img"));
-  await Promise.all(
+  const results = await Promise.all(
     imgEls.map(async (img) => {
       const source = img.currentSrc || img.src;
-      if (!source) return;
+      if (!source) return true;
 
       if (/^data:/i.test(img.src)) {
         img.srcset = "";
-        return;
+        const ready = await waitForImageDecode(img);
+        if (!ready) return false;
+
+        // Large local files can make html-to-image's cloned SVG exceed WebView
+        // limits even though the live preview can decode the original source.
+        if (img.classList.contains("card-image")) {
+          const normalized = rasterizeContentImage(img, renderPixelRatio);
+          if (normalized) {
+            img.src = normalized;
+            return waitForImageDecode(img);
+          }
+        }
+        return true;
       }
 
-      // First, ensure image is decoded in DOM
-      await waitForImageDecode(img);
-
-      // Attempt 1: Direct 2D canvas drawing (extracts decoded pixels from DOM element without network fetch)
+      // Reuse pixels already decoded by the preview/export DOM when CORS allows it.
       let dataUrl = null;
       if (img.complete && img.naturalWidth > 0) {
         dataUrl = convertImageElementToDataUrl(img);
       }
 
-      // Attempt 2: If canvas extraction failed (e.g. CORS), fetch source using absolute URL
       if (!dataUrl) {
         try {
-          const absoluteUrl = new URL(source, window.location.href).href;
-          const response = await fetch(absoluteUrl, { mode: "cors" });
-          if (response.ok) {
-            const blob = await response.blob();
-            dataUrl = await blobToDataUrl(blob);
-          }
+          dataUrl = await loadImageSourceAsDataUrl(source);
         } catch (error) {
           console.warn(`Failed to inline image for export: ${source}`, error);
         }
@@ -651,10 +602,140 @@ async function inlineImagesForExport(root) {
       if (dataUrl) {
         img.srcset = "";
         img.src = dataUrl;
-        await waitForImageDecode(img);
+        return waitForImageDecode(img);
       }
+
+      return false;
     }),
   );
+
+  if (results.some((ready) => !ready)) {
+    throw new Error("One or more images could not be prepared for export");
+  }
+}
+
+function rasterizeContentImage(img, renderPixelRatio) {
+  try {
+    const naturalWidth = img.naturalWidth || 0;
+    const naturalHeight = img.naturalHeight || 0;
+    if (naturalWidth <= 0 || naturalHeight <= 0) return null;
+
+    const rect = img.getBoundingClientRect();
+    const targetScale = Math.max(1, Number(renderPixelRatio) || 1);
+    const requestedWidth = rect.width > 0
+      ? Math.ceil(rect.width * targetScale)
+      : naturalWidth;
+    const scale = Math.min(1, 4096 / naturalWidth, 4096 / naturalHeight, requestedWidth / naturalWidth);
+    const width = Math.max(1, Math.round(naturalWidth * scale));
+    const height = Math.max(1, Math.round(naturalHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    context.drawImage(img, 0, 0, width, height);
+
+    const sourceType = img.src.match(/^data:([^;,]+)/i)?.[1]?.toLowerCase() || "";
+    const outputType = sourceType === "image/jpeg" ? "image/jpeg" : "image/png";
+    return canvas.toDataURL(outputType, outputType === "image/jpeg" ? 0.92 : undefined);
+  } catch (error) {
+    console.warn("Failed to normalize local image for export", error);
+    return null;
+  }
+}
+
+function compositeContentImages(canvas, root) {
+  const context = canvas.getContext("2d");
+  const rootRect = root.getBoundingClientRect();
+  if (!context || rootRect.width <= 0 || rootRect.height <= 0) return;
+
+  const scaleX = canvas.width / rootRect.width;
+  const scaleY = canvas.height / rootRect.height;
+  for (const image of root.querySelectorAll("img.card-image")) {
+    if (!image.complete || image.naturalWidth <= 0) continue;
+
+    const rect = image.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    const x = (rect.left - rootRect.left) * scaleX;
+    const y = (rect.top - rootRect.top) * scaleY;
+    const width = rect.width * scaleX;
+    const height = rect.height * scaleY;
+    const radius = Math.min(8 * Math.min(scaleX, scaleY), width / 2, height / 2);
+    const opacity = Number.parseFloat(getComputedStyle(image).opacity);
+
+    context.save();
+    context.globalAlpha = Number.isFinite(opacity) ? opacity : 1;
+    roundedRectPath(context, x, y, width, height, radius);
+    context.clip();
+    context.drawImage(image, x, y, width, height);
+    context.restore();
+  }
+}
+
+function roundedRectPath(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.arcTo(x + width, y, x + width, y + radius, radius);
+  context.lineTo(x + width, y + height - radius);
+  context.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+  context.lineTo(x + radius, y + height);
+  context.arcTo(x, y + height, x, y + height - radius, radius);
+  context.lineTo(x, y + radius);
+  context.arcTo(x, y, x + radius, y, radius);
+  context.closePath();
+}
+
+async function inlineBackgroundImagesForExport(root) {
+  const elements = [root, ...root.querySelectorAll("*")];
+  const candidates = elements
+    .map((element) => ({
+      element,
+      source: extractCssUrl(element.style.backgroundImage),
+    }))
+    .filter(({ source }) => source && !/^data:/i.test(source));
+
+  for (const { element, source } of candidates) {
+    try {
+      const dataUrl = await loadImageSourceAsDataUrl(source);
+      const probe = new Image();
+      probe.src = dataUrl;
+      if (!await waitForImageDecode(probe)) {
+        throw new Error("Decoded background image is empty");
+      }
+      element.style.backgroundImage = `url("${dataUrl}")`;
+    } catch (error) {
+      console.warn(`Failed to inline background image for export: ${source}`, error);
+      throw new Error("A background image could not be prepared for export");
+    }
+  }
+}
+
+function extractCssUrl(backgroundImage) {
+  const match = String(backgroundImage || "").trim().match(/^url\((.*)\)$/i);
+  if (!match) return "";
+  return match[1].trim().replace(/^(["'])(.*)\1$/, "$2");
+}
+
+async function loadImageSourceAsDataUrl(source) {
+  const absoluteUrl = new URL(source, window.location.href).href;
+
+  try {
+    const response = await fetch(absoluteUrl, { cache: "force-cache", mode: "cors" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (blob.type && !blob.type.startsWith("image/")) {
+      throw new Error(`Unexpected content type: ${blob.type}`);
+    }
+    return await blobToDataUrl(blob);
+  } catch (browserError) {
+    if (!isTauriRuntime() || !/^https?:/i.test(absoluteUrl)) throw browserError;
+
+    const resolved = await invoke("resolve_remote_image", { url: absoluteUrl });
+    if (!resolved?.dataUrl) throw browserError;
+    return resolved.dataUrl;
+  }
 }
 
 /** Replace cover SVG sources with PNG data before the final DOM capture. */
@@ -690,34 +771,43 @@ async function rasterizeCoverStickersForExport(root) {
 }
 
 function waitForImageDecode(img) {
-  if (!img) return Promise.resolve();
+  if (!img) return Promise.resolve(false);
+
+  if (img.complete) {
+    if (img.naturalWidth <= 0) return Promise.resolve(false);
+    if (typeof img.decode === "function") {
+      return img.decode()
+        .then(() => true)
+        .catch(() => img.complete && img.naturalWidth > 0);
+    }
+    return Promise.resolve(true);
+  }
 
   return new Promise((resolve) => {
-    if (img.complete && img.naturalWidth > 0) {
-      resolve();
-      return;
-    }
-
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
       img.removeEventListener("load", finish);
       img.removeEventListener("error", finish);
-      resolve();
+      resolve(img.complete && img.naturalWidth > 0);
     };
 
-    if (img.complete && img.naturalWidth > 0) {
+    if (img.complete) {
       finish();
     } else {
       img.addEventListener("load", finish);
       img.addEventListener("error", finish);
-      setTimeout(finish, 800);
+      setTimeout(finish, 3000);
     }
-  }).then(() => {
+  }).then((loaded) => {
+    if (!loaded) return false;
     if (typeof img.decode === "function") {
-      return img.decode().catch(() => undefined);
+      return img.decode()
+        .then(() => true)
+        .catch(() => img.complete && img.naturalWidth > 0);
     }
+    return img.complete && img.naturalWidth > 0;
   });
 }
 

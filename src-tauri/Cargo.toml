@@ -25,4 +25,5 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 tauri-plugin-updater = "2.10.1"

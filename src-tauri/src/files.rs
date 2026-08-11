@@ -1,9 +1,11 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use base64::{engine::general_purpose, Engine as _};
+use reqwest::{header::CONTENT_TYPE, redirect::Policy, Url};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
@@ -294,6 +296,70 @@ pub async fn resolve_local_image(
     })
     .await
     .map_err(|err| format!("Task execution failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn resolve_remote_image(url: String) -> Result<LocalImage, String> {
+    const MAX_IMAGE_BYTES: u64 = 25 * 1024 * 1024;
+
+    let parsed_url = Url::parse(url.trim()).map_err(|err| format!("Invalid image URL: {err}"))?;
+    if !matches!(parsed_url.scheme(), "http" | "https") {
+        return Err("Only HTTP and HTTPS image URLs are supported".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(20))
+        .redirect(Policy::limited(5))
+        .build()
+        .map_err(|err| format!("Failed to prepare image request: {err}"))?;
+
+    let response = client
+        .get(parsed_url.clone())
+        .send()
+        .await
+        .map_err(|err| format!("Failed to download remote image: {err}"))?
+        .error_for_status()
+        .map_err(|err| format!("Remote image request failed: {err}"))?;
+
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_IMAGE_BYTES)
+    {
+        return Err("Remote image exceeds the 25 MB export limit".to_string());
+    }
+
+    let media_type = response
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .map(str::trim)
+        .filter(|value| value.starts_with("image/"))
+        .ok_or_else(|| "Remote URL did not return an image".to_string())?
+        .to_string();
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|err| format!("Failed to read remote image: {err}"))?;
+    if bytes.len() as u64 > MAX_IMAGE_BYTES {
+        return Err("Remote image exceeds the 25 MB export limit".to_string());
+    }
+
+    let encoded = general_purpose::STANDARD.encode(&bytes);
+    let remote_file_name = parsed_url
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("remote-image")
+        .to_string();
+
+    Ok(LocalImage {
+        path: parsed_url.to_string(),
+        file_name: remote_file_name,
+        media_type: media_type.clone(),
+        data_url: format!("data:{media_type};base64,{encoded}"),
+    })
 }
 
 fn write_markdown_path(

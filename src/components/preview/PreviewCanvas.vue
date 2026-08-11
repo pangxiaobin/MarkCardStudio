@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import AppIcon from "../AppIcon.vue";
+import CardArtwork from "./CardArtwork.vue";
 import PreviewArtworkCard from "./PreviewArtworkCard.vue";
 
 const props = defineProps({
@@ -81,6 +82,20 @@ const artworkCardRef = ref(null);
 const isFullscreen = ref(false);
 const { t } = useI18n();
 
+const overviewGeometry = computed(() => {
+  const width = Number(props.selectedPlatform?.width) || 1080;
+  const height = Number(props.selectedPlatform?.height) || 1440;
+  const designWidth = width > height ? 640 : 450;
+  const designHeight = Math.max(1, Math.round(designWidth * (height / width)));
+  const displayWidth = 180;
+  const scale = displayWidth / designWidth;
+  return {
+    displayWidth,
+    displayHeight: Math.round(designHeight * scale),
+    scale,
+  };
+});
+
 defineExpose({
   getCanvasElement: () => artworkCardRef.value?.getCanvasElement?.(),
   openFullscreen: () => {
@@ -102,6 +117,7 @@ defineExpose({
         :canvas-ratio="canvasRatio"
         :selected-platform="selectedPlatform"
         :selected-theme-class="selectedThemeClass"
+        auto-fit
         :zoom="zoom"
         :transparent-background="transparentBackground"
         :background-color="backgroundColor"
@@ -123,22 +139,32 @@ defineExpose({
         <div
           v-for="(page, index) in pages"
           :key="index"
-          class="group/gridcard relative w-[180px] h-[240px] shrink-0 overflow-hidden rounded-xl transition-all duration-200 cursor-pointer"
+          class="group/gridcard relative shrink-0 overflow-hidden rounded-xl transition-all duration-200 cursor-pointer"
           :class="index === activePageIndex ? 'ring-3 ring-blue-500 shadow-xl scale-102' : 'hover:shadow-lg hover:scale-101 border border-slate-200/60 dark:border-slate-800'"
+          :style="{ width: `${overviewGeometry.displayWidth}px`, height: `${overviewGeometry.displayHeight}px` }"
           :title="t('preview.single')"
           @click="$emit('select-page', index)"
           @dblclick="$emit('select-page', index); $emit('set-view-mode', 'single')"
         >
-          <div class="absolute top-0 left-0 origin-top-left transform scale-[0.444] pointer-events-none w-[405px]">
-            <PreviewArtworkCard
-              :active-page="page"
-              :canvas-ratio="canvasRatio"
+          <div
+            class="pointer-events-none absolute left-0 top-0 origin-top-left"
+            :style="{ transform: `scale(${overviewGeometry.scale})` }"
+          >
+            <CardArtwork
+              :page="page"
+              :page-index="index"
+              :pages-length="pages.length"
+              :selected-platform="selectedPlatform"
               :selected-theme-class="selectedThemeClass"
-              :zoom="74"
               :transparent-background="transparentBackground"
               :background-color="backgroundColor"
               :background-type="backgroundType"
               :background-value="backgroundValue"
+              :show-page-number="showPageNumber"
+              :show-top-left="showTopLeft"
+              :show-top-right="showTopRight"
+              :show-bottom-left="showBottomLeft"
+              :show-bottom-right="showBottomRight"
             />
           </div>
         </div>
@@ -171,6 +197,7 @@ defineExpose({
             :selected-platform="selectedPlatform"
             :selected-theme-class="selectedThemeClass"
             :zoom="90"
+            :auto-fit="false"
             :transparent-background="transparentBackground"
             :background-color="backgroundColor"
             :background-type="backgroundType"

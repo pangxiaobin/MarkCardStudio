@@ -77,6 +77,7 @@ pub fn run() {
             files::save_markdown_file,
             files::write_markdown_file,
             files::resolve_local_image,
+            files::resolve_remote_image,
             files::pick_export_folder,
             files::get_default_export_folder,
             files::save_export_file,

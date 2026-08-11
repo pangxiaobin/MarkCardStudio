@@ -1,9 +1,8 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import AppIcon from "../AppIcon.vue";
-import { getCardLayoutClass, parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "../../composables/useContentParser.js";
-import { getCoverStickers } from "../../config/coverStickers.js";
+import CardArtwork from "./CardArtwork.vue";
 
 const props = defineProps({
   activePage: { type: Object, required: true },
@@ -16,6 +15,7 @@ const props = defineProps({
   },
   selectedThemeClass: { type: String, required: true },
   zoom: { type: Number, required: true },
+  autoFit: { type: Boolean, default: true },
   transparentBackground: { type: Boolean, default: false },
   backgroundColor: { type: String, default: "#69eacb" },
   backgroundType: { type: String, default: "gradient" },
@@ -28,40 +28,31 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["fullscreen", "copy"]);
-const canvasElement = ref(null);
+const previewRoot = ref(null);
+const artworkRef = ref(null);
+const fitScale = ref(1);
+let resizeObserver = null;
 const { t } = useI18n();
 
-defineExpose({ getCanvasElement: () => canvasElement.value });
+defineExpose({ getCanvasElement: () => artworkRef.value?.getCanvasElement?.() });
 
 const previewGeometry = computed(() => {
   const width = props.selectedPlatform?.width || 1080;
   const height = props.selectedPlatform?.height || 1440;
-  const zoomFactor = props.zoom / 74;
+  const zoomFactor = Math.max(0.3, props.zoom / 74);
   const isLandscape = width > height;
+  const baseWidth = isLandscape ? 640 : 450;
+  const baseHeight = Math.max(1, Math.round(baseWidth * (height / width)));
 
-  if (isLandscape) {
-    const baseWidth = 640;
-    const baseHeight = Math.round(baseWidth * (height / width));
-    const displayWidth = Math.min(680, Math.round(540 * zoomFactor));
-    const scale = displayWidth / baseWidth;
-    return {
-      baseWidth,
-      baseHeight,
-      displayWidth,
-      displayHeight: Math.round(baseHeight * scale),
-      scale,
-    };
-  }
-
-  const baseWidth = 450;
-  const baseHeight = Math.round(baseWidth * (height / width));
-  const displayHeight = Math.min(620, Math.round(540 * zoomFactor));
-  const scale = displayHeight / baseHeight;
+  const fallbackScale = isLandscape
+    ? Math.min(680 / baseWidth, 540 * zoomFactor / baseWidth)
+    : Math.min(620 / baseHeight, 540 * zoomFactor / baseHeight);
+  const scale = props.autoFit ? fitScale.value * zoomFactor : fallbackScale;
   return {
     baseWidth,
     baseHeight,
     displayWidth: Math.round(baseWidth * scale),
-    displayHeight,
+    displayHeight: Math.round(baseHeight * scale),
     scale,
   };
 });
@@ -71,115 +62,78 @@ const previewFrameStyle = computed(() => ({
   height: `${previewGeometry.value.displayHeight}px`,
 }));
 
-const cardLayoutClass = computed(() => getCardLayoutClass(
-  props.selectedPlatform?.width,
-  props.selectedPlatform?.height,
-));
+const artworkStyle = computed(() => ({
+  transform: `scale(${previewGeometry.value.scale})`,
+  transformOrigin: "top left",
+}));
 
-// Render at the same design size as export, then scale the whole poster for preview.
-const posterCanvasStyle = computed(() => {
+function updateFitScale() {
+  if (!props.autoFit) return;
+  const stage = previewRoot.value?.parentElement;
+  if (!stage) return;
+
+  const availableWidth = Math.max(1, stage.clientWidth - 16);
+  const availableHeight = Math.max(1, stage.clientHeight - 16);
   const geometry = previewGeometry.value;
-  const dims = {
-    width: `${geometry.baseWidth}px`,
-    height: `${geometry.baseHeight}px`,
-    transform: `scale(${geometry.scale})`,
-    transformOrigin: "top left",
-  };
-
-  if (props.transparentBackground) {
-    return { ...dims, background: "transparent", backgroundColor: "transparent", backgroundImage: "none" };
-  }
-  if (props.backgroundType === "solid") {
-    const bg = props.backgroundValue || props.backgroundColor || "#fff7e9";
-    return { ...dims, background: bg, backgroundColor: bg, backgroundImage: "none" };
-  }
-  if (props.backgroundType === "gradient" || props.backgroundType === "pattern") {
-    return { ...dims, background: props.backgroundValue, backgroundImage: props.backgroundValue };
-  }
-  if (props.backgroundType === "image" || props.backgroundType === "wallpaper") {
-    if (props.backgroundValue?.startsWith("data:") || props.backgroundValue?.startsWith("http") || props.backgroundValue?.startsWith("blob:") || props.backgroundValue?.startsWith("/")) {
-      return { ...dims, backgroundImage: `url('${props.backgroundValue}')`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" };
-    }
-    return { ...dims, background: props.backgroundValue, backgroundImage: props.backgroundValue };
-  }
-  return { ...dims, backgroundColor: props.backgroundColor || "#fff7e9" };
-});
-
-// Render blocks to HTML — use pre-parsed blocks if available, otherwise parse on-the-fly
-const renderedBody = computed(() => {
-  const blocks = props.activePage?.blocks
-    ?? parseBlocks(props.activePage?.bodyMarkdown?.split("\n") ?? props.activePage?.body ?? []);
-  return renderBlocksToHtml(blocks);
-});
-
-const coverStickers = computed(() => (
-  props.activePage?.cover ? getCoverStickers(props.selectedThemeClass) : []
-));
-
-async function triggerMermaid() {
-  await nextTick();
-  if (canvasElement.value) {
-    await renderMermaidDiagrams(canvasElement.value);
-  }
+  fitScale.value = Math.max(
+    0.08,
+    Math.min(
+      availableWidth / geometry.baseWidth,
+      availableHeight / geometry.baseHeight,
+    ),
+  );
 }
 
-watch(() => props.activePage, triggerMermaid, { immediate: true, deep: true });
-onMounted(triggerMermaid);
+onMounted(async () => {
+  await nextTick();
+  if (!props.autoFit) return;
+  const stage = previewRoot.value?.parentElement;
+  if (!stage) return;
+  resizeObserver = new ResizeObserver(updateFitScale);
+  resizeObserver.observe(stage);
+  updateFitScale();
+});
 
-const defaultDateString = computed(() => {
-  const now = new Date();
-  return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, "0")}.${String(now.getDate()).padStart(2, "0")}`;
+watch(
+  () => [props.autoFit, props.selectedPlatform?.width, props.selectedPlatform?.height],
+  async () => {
+    if (!props.autoFit) return;
+    await nextTick();
+    updateFitScale();
+  },
+);
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 });
 </script>
 
 <template>
   <div
+    ref="previewRoot"
     class="relative shrink-0"
     :style="previewFrameStyle"
   >
-    <!-- Outer Poster Canvas Frame -->
-    <div
-      ref="canvasElement"
-      class="poster-canvas-frame absolute left-0 top-0 flex flex-col justify-between p-5 overflow-hidden rounded-2xl shadow-xl transition-all duration-200 select-none"
-      :style="posterCanvasStyle"
-    >
-    <!-- Top Header (on outer background) -->
-    <div
-      v-if="showTopLeft || showTopRight"
-      class="poster-header z-10 flex items-center justify-between text-xs font-semibold px-1 pb-2 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]"
-    >
-      <div class="flex items-center gap-1.5">
-        <span v-if="showTopLeft" class="inline-flex items-center rounded-md bg-black/10 dark:bg-white/15 px-2 py-0.5 text-[11px] font-bold backdrop-blur-xs tracking-wide">
-          {{ activePage.kicker || "@MarkCard" }}
-        </span>
-      </div>
-      <div v-if="showTopRight && showPageNumber" class="text-[11px] font-mono font-bold opacity-80">
-        {{ String(activePageIndex + 1).padStart(2, "0") }} / {{ String(pagesLength || 1).padStart(2, "0") }}
-      </div>
-    </div>
+    <div class="group/card absolute left-0 top-0" :style="artworkStyle">
+      <CardArtwork
+        ref="artworkRef"
+        :page="activePage"
+        :page-index="activePageIndex"
+        :pages-length="pagesLength"
+        :selected-platform="selectedPlatform"
+        :selected-theme-class="selectedThemeClass"
+        :transparent-background="transparentBackground"
+        :background-color="backgroundColor"
+        :background-type="backgroundType"
+        :background-value="backgroundValue"
+        :show-page-number="showPageNumber"
+        :show-top-left="showTopLeft"
+        :show-top-right="showTopRight"
+        :show-bottom-left="showBottomLeft"
+        :show-bottom-right="showBottomRight"
+      />
 
-    <!-- Inner Card Canvas (theme-controlled) -->
-    <article
-      class="card-canvas group/card relative flex-1 flex flex-col h-full w-full rounded-xl overflow-hidden shadow-md border border-black/5 dark:border-white/10"
-      :class="[selectedThemeClass, cardLayoutClass, { 'is-cover': activePage.cover }]"
-    >
-      <div class="leaf-shadow top"></div>
-      <div class="leaf-shadow side"></div>
-
-      <div v-if="coverStickers.length" class="cover-sticker-layer" aria-hidden="true">
-        <img
-          v-for="sticker in coverStickers"
-          :key="sticker.position"
-          :src="sticker.src"
-          alt=""
-          class="cover-sticker"
-          :class="`cover-sticker--${sticker.position}`"
-          loading="eager"
-          draggable="false"
-        />
-      </div>
-
-      <!-- Hover Action Bar -->
       <div class="absolute right-3.5 top-3.5 z-20 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 pointer-events-auto">
         <button
           type="button"
@@ -190,31 +144,6 @@ const defaultDateString = computed(() => {
           <AppIcon name="maximize" :size="11" />
           {{ t("preview.fullscreenShort") }}
         </button>
-      </div>
-
-      <!-- Scrollable Content Area -->
-      <div class="card-scroll-area">
-        <!-- Card Title -->
-        <h1 v-if="!activePage.isOverflow && activePage.title">{{ activePage.title }}</h1>
-
-        <!-- Block-rendered body content -->
-        <div class="card-body" v-html="renderedBody"></div>
-      </div>
-    </article>
-
-      <!-- Bottom Footer (on outer background) -->
-      <div
-        v-if="showBottomLeft || showBottomRight"
-        class="poster-footer z-10 flex items-center justify-between text-xs pt-2.5 px-1 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]"
-      >
-        <div v-if="showBottomLeft" class="font-mono text-[11px] opacity-85 shrink-0">
-          <span>{{ activePage.date || defaultDateString }}</span>
-        </div>
-        <div v-else></div>
-
-        <strong v-if="showBottomRight" class="truncate text-right font-medium text-[11px] max-w-[70%] opacity-90">
-          {{ activePage.quote || t("runtime.defaultQuote") }}
-        </strong>
       </div>
     </div>
   </div>

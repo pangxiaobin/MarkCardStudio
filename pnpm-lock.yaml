@@ -50,15 +50,9 @@ importers:
       markdown-it:
         specifier: ^15.0.0
         version: 15.0.0
-      markdown-it-anchor:
-        specifier: ^9.2.1
-        version: 9.2.1(@types/markdown-it@14.1.2)(markdown-it@15.0.0)
       markdown-it-container:
         specifier: ^4.0.0
         version: 4.0.0
-      markdown-it-emoji:
-        specifier: ^3.1.0
-        version: 3.1.0
       markdown-it-footnote:
         specifier: ^4.0.0
         version: 4.0.0
@@ -804,15 +798,6 @@ packages:
   '@types/geojson@7946.0.16':
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
 
-  '@types/linkify-it@5.0.0':
-    resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
-
-  '@types/markdown-it@14.1.2':
-    resolution: {integrity: sha512-promo4eFwuiW+TfGxhi+0x3czqTYJkG8qB17ZUJiVF10Xm7NLVRSLUsfRTU/6h1e24VvRnXCx+hG7li58lkzog==}
-
-  '@types/mdurl@2.0.0':
-    resolution: {integrity: sha512-RGdgjQUZba5p6QEFAVx2OGb8rQDL/cPRG7GiedRzMcJ1tYnUANBncjbSB1NRGwbvjcPeikRABz2nshyPk1bhWg==}
-
   '@types/pako@2.0.4':
     resolution: {integrity: sha512-VWDCbrLeVXJM9fihYodcLiIv0ku+AlOa/TQ1SvYOaBuyrSKgEcro95LJyIsJ4vSo6BXIxOKxiJAat04CmST9Fw==}
 
@@ -1255,17 +1240,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  markdown-it-anchor@9.2.1:
-    resolution: {integrity: sha512-p6APiLJDFAW2GEvaavDvhIBn7jrX2jLv77NkBGgNacFTurbORYc4pyYySg/mI6mpR6cHQuAtzKtmqgQr4K8dsQ==}
-    peerDependencies:
-      '@types/markdown-it': '*'
-      markdown-it: '*'
-
   markdown-it-container@4.0.0:
     resolution: {integrity: sha512-HaNccxUH0l7BNGYbFbjmGpf5aLHAMTinqRZQAEQbMr2cdD3z91Q6kIo1oUn1CQndkT03jat6ckrdRYuwwqLlQw==}
-
-  markdown-it-emoji@3.1.0:
-    resolution: {integrity: sha512-NhmMEH2ywduD4Nty1E8uB5NqfLhAT1VR0dyvoJyStKOqCzbZmVdn/+8wj7zpDsb/fLBikpCPsWwxqKlvMmbz4g==}
 
   markdown-it-footnote@4.0.0:
     resolution: {integrity: sha512-WYJ7urf+khJYl3DqofQpYfEYkZKbmXmwxQV8c8mO/hGIhgZ1wOe7R4HLFNwqx7TjILbnC98fuyeSsin19JdFcQ==}
@@ -2057,15 +2033,6 @@ snapshots:
 
   '@types/geojson@7946.0.16': {}
 
-  '@types/linkify-it@5.0.0': {}
-
-  '@types/markdown-it@14.1.2':
-    dependencies:
-      '@types/linkify-it': 5.0.0
-      '@types/mdurl': 2.0.0
-
-  '@types/mdurl@2.0.0': {}
-
   '@types/pako@2.0.4': {}
 
   '@types/raf@3.4.3':
@@ -2548,14 +2515,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  markdown-it-anchor@9.2.1(@types/markdown-it@14.1.2)(markdown-it@15.0.0):
-    dependencies:
-      '@types/markdown-it': 14.1.2
-      markdown-it: 15.0.0
-
   markdown-it-container@4.0.0: {}
-
-  markdown-it-emoji@3.1.0: {}
 
   markdown-it-footnote@4.0.0: {}
 

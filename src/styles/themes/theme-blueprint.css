@@ -17,4 +17,13 @@
 .card-canvas.theme-blueprint .card-table th { background: rgba(14,116,144,.8); color: #fff; }
 .card-canvas.theme-blueprint .card-table td { border-bottom-color: rgba(186,230,253,.25); }
 .card-canvas.theme-blueprint .card-divider { border-top: 1px dashed #7dd3fc; }
+.card-canvas.theme-blueprint .card-callout { border-radius: 0; border-width: 1px; color: #e0f2fe; }
+.card-canvas.theme-blueprint .card-callout.callout-tip { background: rgba(6, 78, 59, .82); border-color: #6ee7b7; color: #d1fae5; }
+.card-canvas.theme-blueprint .card-callout.callout-tip > div:first-child { color: #a7f3d0; }
+.card-canvas.theme-blueprint .card-callout.callout-warning { background: rgba(120, 53, 15, .84); border-color: #fcd34d; color: #fef3c7; }
+.card-canvas.theme-blueprint .card-callout.callout-warning > div:first-child { color: #fde68a; }
+.card-canvas.theme-blueprint .card-callout.callout-danger { background: rgba(136, 19, 55, .82); border-color: #fda4af; color: #ffe4e6; }
+.card-canvas.theme-blueprint .card-callout.callout-danger > div:first-child { color: #fecdd3; }
+.card-canvas.theme-blueprint .card-callout.callout-info, .card-canvas.theme-blueprint .card-callout.callout-note { background: rgba(8, 47, 73, .86); border-color: #7dd3fc; color: #e0f2fe; }
+.card-canvas.theme-blueprint .card-callout.callout-info > div:first-child, .card-canvas.theme-blueprint .card-callout.callout-note > div:first-child { color: #bae6fd; }
 .card-canvas.theme-blueprint.is-cover h1 { max-width: 90%; margin-top: 24px; }

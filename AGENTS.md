@@ -8,13 +8,13 @@ MarkCard Studio is a local-first Markdown-to-social-card authoring application. 
 Markdown source -> parse and paginate -> themed card preview -> PNG/JPG/PDF/long-PNG export
 ```
 
-Keep changes aligned with this workflow. This repository currently implements one Vue workspace and a thin Tauri filesystem layer; it does not use Vue Router, Pinia, or TypeScript.
+Keep changes aligned with this workflow. This repository currently implements one Vue workspace and a small Tauri native-I/O layer; it does not use Vue Router, Pinia, or TypeScript.
 
 ## Stack and Commands
 
 - Package manager: `pnpm` (keep `pnpm-lock.yaml` authoritative).
 - Frontend: Vue 3 `<script setup>`, JavaScript, Vite 6, Tailwind CSS 4, DaisyUI.
-- Desktop: Tauri 2 and Rust 2021.
+- Desktop: Tauri 2, Rust 2021, and reqwest for bounded remote image retrieval.
 - Editor/rendering: CodeMirror 6, markdown-it, Highlight.js, KaTeX, Mermaid.
 - Export: html-to-image and jsPDF.
 - Internationalization: vue-i18n with Simplified Chinese and English resources.
@@ -33,25 +33,34 @@ There is currently no automated test, lint, or format script. Do not claim those
 ## Architecture
 
 - `src/App.vue`: composes the three-panel workspace and wires document state to UI events.
-- `src/composables/useStudioDocument.js`: primary state owner. Handles document lifecycle, undo/redo, settings/draft persistence, platform presets, parsing, pagination, local image resolution, and page metadata.
-- `src/composables/useContentParser.js`: converts Markdown-like source into render blocks, estimates page height, renders block HTML, and hydrates Mermaid output.
-- `src/composables/useCardExport.js`: renders cards offscreen and writes PNG/JPG/PDF/long-PNG output. Native writes go through Tauri commands; browser mode downloads blobs.
-- `src/components/preview/`: live preview canvas, navigation, overview, and card artwork.
+- `src/composables/useStudioDocument.js`: primary state owner. Handles document lifecycle, undo/redo, settings/draft persistence, platform presets, parsing, measured-pagination orchestration, local image resolution, and page metadata.
+- `src/composables/useContentParser.js`: converts Markdown source into render blocks, renders block HTML, and hydrates Mermaid output.
+- `src/composables/useMeasuredPagination.js`: mounts the shared card renderer offscreen, measures real DOM overflow, splits supported blocks, caches measurements, and marks unsplittable oversized blocks.
+- `src/composables/useCardExport.js`: mounts the shared card renderer offscreen, prepares images/Mermaid/KaTeX for capture, composites Markdown images onto the result canvas, and writes PNG/JPG/PDF/long-PNG output. Native writes go through Tauri commands; browser mode downloads blobs.
+- `src/components/preview/CardArtwork.vue`: canonical card markup used by single preview, overview, measured pagination, and export. Card content or metadata changes belong here.
+- `src/components/preview/PreviewArtworkCard.vue`: responsive preview wrapper that scales `CardArtwork.vue` and owns preview-only controls.
+- `src/components/preview/`: live preview canvas, navigation, overview, and shared card artwork.
 - `src/components/settings/`: platform, pagination, background, header/footer, and export controls.
 - `src/config/themes.js`: theme catalog and default theme.
 - `src/config/coverStickers.js`: theme-to-OpenMoji sticker mapping.
 - `src/i18n/`: one translation resource file per locale plus persisted language and appearance preferences.
 - `src/styles/themes/`: shared card CSS and one stylesheet per theme.
-- `src-tauri/src/files.rs`: native dialogs, Markdown reads/writes, local image conversion, output folders, and export file writes.
+- `src-tauri/src/files.rs`: native dialogs, Markdown reads/writes, local and bounded remote image conversion, output folders, and export file writes.
 - `src-tauri/src/lib.rs`: Tauri plugin setup and command registration.
 
 ## Important Invariants
 
 ### Preview and Export Must Match
 
-The live preview and exported files do not share one DOM tree. Preview components render the interactive card, while `useCardExport.js` builds an offscreen card for capture. Any change to card content, metadata visibility, dimensions, backgrounds, images, Mermaid, KaTeX, or theme styling must be checked in both paths.
+The live preview, pagination measurer, and exporter use separate DOM instances, but all must render card markup through `CardArtwork.vue`. Do not reintroduce hand-built export markup or duplicate card content in preview wrappers. Any change to card content, metadata visibility, dimensions, backgrounds, images, Mermaid, KaTeX, or theme styling must still be checked in preview, pagination, and export because their preparation and scaling steps differ.
 
-Export capture deliberately inlines images and Mermaid SVGs and rasterizes KaTeX formulas to avoid WebView capture failures. Preserve those preparation steps unless the replacement is verified in Tauri on representative documents.
+Export capture deliberately inlines content images and CSS backgrounds, converts Mermaid SVGs, rasterizes KaTeX formulas and cover stickers, waits for decoded image dimensions, and composites Markdown images onto the final canvas. Local Markdown images are resolved to data URLs before pagination. Remote images use browser fetch first and the bounded Tauri resolver as a desktop fallback. Preserve these preparation steps unless the replacement is verified in Tauri on representative documents.
+
+### Pagination Uses Real Card Measurements
+
+Pagination is asynchronous and abortable. `useStudioDocument.js` creates a measured-pagination session for the selected platform, theme, and header/footer visibility settings. The session mounts `CardArtwork.vue` offscreen and uses actual `scrollHeight`/`clientHeight` values instead of estimated block heights.
+
+Keep measurement hosts offscreen but rendered; do not use `display: none`, `visibility: hidden`, or inherited opacity. Wait for fonts, images, and Mermaid before trusting dimensions. When adding a splittable block type, update both the parser/rendering contract and `useMeasuredPagination.js`. Unsplittable oversized blocks must retain their `oversize` marker and visible warning.
 
 ### Document State Has One Main Owner
 
@@ -61,7 +70,7 @@ Settings and draft data use versioned `localStorage` keys. Treat stored settings
 
 ### Browser Fallbacks Are Intentional
 
-Frontend calls to Tauri may fail when the app runs under `pnpm dev` in a browser. Preserve graceful fallbacks for document import, file download, and folder selection. Native-only behavior belongs in `src-tauri`, exposed through narrowly scoped commands.
+Frontend calls to Tauri may fail when the app runs under `pnpm dev` in a browser. Preserve graceful fallbacks for document import, file download, folder selection, and image fetching. Browser export remains subject to normal CORS rules; the remote-image Tauri command is a desktop fallback, not a browser proxy. Native-only behavior belongs in `src-tauri`, exposed through narrowly scoped commands.
 
 ### Theme Changes Span Multiple Files
 
@@ -89,9 +98,11 @@ Use a stable `theme-<name>` id/class. Theme CSS must work for every platform rat
 
 ### Markdown Syntax or Pagination
 
-- Update parsing/rendering in `useContentParser.js` and orchestration in `useStudioDocument.js` as needed.
+- Update parsing/rendering in `useContentParser.js`, measurement/splitting in `useMeasuredPagination.js`, and orchestration in `useStudioDocument.js` as needed.
+- Render measurement candidates through `CardArtwork.vue`; do not add a second simplified measurement template.
 - Check empty documents, long paragraphs, explicit delimiters, code blocks, tables, images, KaTeX, and Mermaid.
 - Verify overflow at Xiaohongshu 3:4, Douyin 9:16, square, and a custom size.
+- Confirm rapid edits or settings changes abort stale pagination work and do not replace newer pages.
 
 ### Native File Behavior
 
@@ -99,12 +110,15 @@ Use a stable `theme-<name>` id/class. Theme CSS must work for every platform rat
 - Register it in `src-tauri/src/lib.rs`.
 - Add only the minimum capability permissions required in `src-tauri/capabilities/default.json`.
 - Keep path validation and error messages at the native boundary.
+- Keep remote image retrieval limited to HTTP/HTTPS, validate image content types, and retain explicit timeout, redirect, and response-size limits.
 - Verify filenames and paths on macOS, Windows, and Linux semantics where relevant.
 
 ### Export Behavior
 
 - Test PNG and JPG as multiple files, PDF as multiple pages, and long PNG as one stitched canvas.
-- Test local Markdown images, transparent output, a wallpaper background, Mermaid, KaTeX, and all header/footer visibility toggles.
+- Test relative, absolute, and `file://` local Markdown images, including large PNG/JPEG/WebP files and multiple images across pages.
+- Test a CORS-restricted remote Markdown image in Tauri, transparent output, built-in and custom wallpaper backgrounds, Mermaid, KaTeX, cover stickers, and all header/footer visibility toggles.
+- Confirm local images are present in the saved files, not only in preview or the offscreen export DOM.
 - Ensure output dimensions match the selected platform and that document-specific subfolder names are sanitized.
 
 ## Validation Before Handoff

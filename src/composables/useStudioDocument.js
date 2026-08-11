@@ -1,12 +1,7 @@
-import { computed, ref, watch } from "vue";
-import MarkdownIt from "markdown-it";
-import markdownItAnchor from "markdown-it-anchor";
-import markdownItContainer from "markdown-it-container";
-import { full as markdownItEmoji } from "markdown-it-emoji";
-import markdownItFootnote from "markdown-it-footnote";
-import markdownItTaskLists from "markdown-it-task-lists";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { parseBlocks, splitBlocksIntoPages, blocksToPreviewText, getCardLayoutMetrics, estimateTitleHeight } from "./useContentParser.js";
+import { parseBlocks, blocksToPreviewText } from "./useContentParser.js";
+import { createMeasuredPaginationSession } from "./useMeasuredPagination.js";
 import { DEFAULT_THEME, THEME_LIST, getThemeByName } from "../config/themes.js";
 import { i18n } from "../i18n/index.js";
 
@@ -166,28 +161,13 @@ const platforms = [
   { name: "通用方形", size: "1080 x 1080", width: 1080, height: 1080, ratio: "1:1", color: "#6366f1", description: "通用社交媒体 1:1 正方形配图" },
   { name: "自定义尺寸", size: "自定义", width: 1200, height: 1600, ratio: "自定义", color: "#8b5cf6", custom: true, description: "自定义卡片宽度、高度与画幅比例" },
 ];
-
-
-
-const markdown = MarkdownIt({
-  html: true,
-  linkify: true,
-  breaks: true,
-});
-
-markdown
-  .use(markdownItAnchor)
-  .use(markdownItFootnote)
-  .use(markdownItTaskLists)
-  .use(markdownItEmoji)
-  .use(markdownItContainer, "tip")
-  .use(markdownItContainer, "warning");
-
 const imageCache = new Map();
 const SETTINGS_KEY = "markcard_studio_settings_v1";
 const EXPORT_FORMATS = ["PNG", "JPG", "PDF", "长图(PNG)"];
 const PAGINATION_MODES = ["h2", "h3", "delimiter", "length", "smart"];
 const BACKGROUND_TYPES = ["solid", "gradient", "pattern", "image", "wallpaper"];
+const MIN_CUSTOM_ASPECT_RATIO = 0.4;
+const MAX_CUSTOM_ASPECT_RATIO = 2.5;
 
 export function useStudioDocument() {
   const initialMarkdown = i18n.global.locale.value === "zh-CN" ? defaultMarkdown : defaultMarkdownEnglish;
@@ -326,6 +306,7 @@ export function useStudioDocument() {
   }
 
   restoreUserSettings();
+  setCustomDimensions(customWidth.value, customHeight.value);
 
   watch(
     [
@@ -580,10 +561,15 @@ export function useStudioDocument() {
 
   let parseVersion = 0;
   let debounceTimer = null;
+  let paginationAbortController = null;
 
   async function updatePagesNow() {
+    paginationAbortController?.abort();
+    const abortController = new AbortController();
+    paginationAbortController = abortController;
     const version = ++parseVersion;
     isLoadingDocument.value = true;
+    let paginationSession = null;
 
     try {
       const parsed = parseMarkdownSections(
@@ -593,28 +579,34 @@ export function useStudioDocument() {
         maxPageLength.value,
       );
       const nextPages = [];
+      paginationSession = createMeasuredPaginationSession({
+        platform: selectedPlatform.value,
+        themeClass: selectedThemeClass.value,
+        showTopLeft: showTopLeft.value,
+        showTopRight: showTopRight.value,
+        showBottomLeft: showBottomLeft.value,
+        showBottomRight: showBottomRight.value,
+        signal: abortController.signal,
+      });
 
       for (let index = 0; index < parsed.length; index += 1) {
         const section = parsed[index];
-        const resolvedMarkdown = await resolveLocalImages(section.bodyMarkdown, sourcePath.value);
-        const imageUrl = await resolveFirstImage(section.bodyMarkdown, sourcePath.value);
-
-        // Parse raw markdown into blocks, then split using the selected
-        // platform's actual aspect-ratio height at the design viewport.
-        const allBlocks = parseBlocks(resolvedMarkdown.split("\n"));
-        const cardLayout = getCardLayoutMetrics(
-          selectedPlatform.value.width,
-          selectedPlatform.value.height,
-        );
-        const titleHeight = section.title ? estimateTitleHeight(section.title, cardLayout) : 0;
-        const firstPageContentHeight = Math.max(120, cardLayout.contentHeight - titleHeight);
-
-        const blockPages = splitBlocksIntoPages(
+        const allBlocks = parseBlocks(section.bodyMarkdown);
+        await resolveBlockImages(allBlocks, sourcePath.value);
+        if (abortController.signal.aborted) return;
+        const resolvedMarkdown = section.bodyMarkdown;
+        const imageUrl = allBlocks.find((block) => block.type === "image")?.src || "";
+        const blockPages = await paginationSession.paginate(
           allBlocks,
-          firstPageContentHeight,
-          cardLayout.contentHeight,
-          cardLayout,
+          {
+            title: section.title,
+            cover: section.cover,
+            maxPageLength: ["length", "smart"].includes(paginationMode.value)
+              ? maxPageLength.value
+              : null,
+          },
         );
+        if (version !== parseVersion) return;
 
         const customMeta = customPageMetas.value[index] || {};
         const baseKicker = customMeta.kicker || section.kicker || globalMeta.value.kicker || "@MarkCard";
@@ -662,7 +654,13 @@ export function useStudioDocument() {
       if (activePageIndex.value > pages.value.length - 1) {
         activePageIndex.value = Math.max(0, pages.value.length - 1);
       }
+    } catch (error) {
+      if (error?.name !== "AbortError") throw error;
     } finally {
+      paginationSession?.destroy();
+      if (paginationAbortController === abortController) {
+        paginationAbortController = null;
+      }
       if (version === parseVersion) {
         isLoadingDocument.value = false;
       }
@@ -677,6 +675,13 @@ export function useStudioDocument() {
     },
     { immediate: true },
   );
+
+  onBeforeUnmount(() => {
+    paginationAbortController?.abort();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    if (historyDebounceTimer) clearTimeout(historyDebounceTimer);
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  });
 
   watch(
     markdownSource,
@@ -693,7 +698,16 @@ export function useStudioDocument() {
     updatePagesNow();
   });
 
-  watch([selectedPlatformName, customWidth, customHeight, selectedTheme], () => {
+  watch([
+    selectedPlatformName,
+    customWidth,
+    customHeight,
+    selectedTheme,
+    showTopLeft,
+    showTopRight,
+    showBottomLeft,
+    showBottomRight,
+  ], () => {
     if (debounceTimer) clearTimeout(debounceTimer);
     updatePagesNow();
   });
@@ -880,6 +894,9 @@ ${t("document.inputHere")}`;
     const val = parseInt(w, 10);
     if (!isNaN(val) && val > 0) {
       customWidth.value = Math.min(3840, Math.max(300, val));
+      const minHeight = Math.ceil(customWidth.value / MAX_CUSTOM_ASPECT_RATIO);
+      const maxHeight = Math.floor(customWidth.value / MIN_CUSTOM_ASPECT_RATIO);
+      customHeight.value = Math.min(3840, Math.max(300, minHeight, Math.min(customHeight.value, maxHeight)));
     }
   }
 
@@ -887,6 +904,9 @@ ${t("document.inputHere")}`;
     const val = parseInt(h, 10);
     if (!isNaN(val) && val > 0) {
       customHeight.value = Math.min(3840, Math.max(300, val));
+      const minWidth = Math.ceil(customHeight.value * MIN_CUSTOM_ASPECT_RATIO);
+      const maxWidth = Math.floor(customHeight.value * MAX_CUSTOM_ASPECT_RATIO);
+      customWidth.value = Math.min(3840, Math.max(300, minWidth, Math.min(customWidth.value, maxWidth)));
     }
   }
 
@@ -1033,10 +1053,12 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
 
   const lines = source.split("\n");
   const documentTitle = extractDocumentTitle(lines);
+  const documentTitleLineIndex = lines.findIndex((line) => /^#\s+/.test(line));
 
   const sections = [];
   const introLines = [];
   let currentSection = null;
+  let activeFence = "";
 
   function isBreakLine(line) {
     const trimmed = line.trim();
@@ -1067,8 +1089,28 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
 
-    if (/^#\s+/.test(line)) {
+    if (activeFence) {
+      const marker = fenceMatch?.[1] || "";
+      const isClosingFence = marker[0] === activeFence[0]
+        && marker.length >= activeFence.length
+        && marker.length === trimmed.length;
+      if (isClosingFence) activeFence = "";
+      if (currentSection) currentSection.bodyMarkdown += `${line}\n`;
+      else introLines.push(line);
+      continue;
+    }
+
+    if (fenceMatch) {
+      activeFence = fenceMatch[1];
+      if (currentSection) currentSection.bodyMarkdown += `${line}\n`;
+      else introLines.push(line);
+      continue;
+    }
+
+    if (i === documentTitleLineIndex) {
       continue;
     }
 
@@ -1098,39 +1140,15 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
     sections.push(currentSection);
   }
 
-  const targetMaxLen = Math.max(80, parseInt(maxLen, 10) || 300);
-  let finalSections = [];
-
-  if ((mode === "length" || mode === "smart") && sections.length > 0) {
-    for (const sec of sections) {
-      const bodyText = sec.bodyMarkdown.trim();
-      if (bodyText.length > targetMaxLen) {
-        const subChunks = splitTextByLength(bodyText, targetMaxLen);
-        subChunks.forEach((chunk, idx) => {
-          finalSections.push({
-            title: sec.title && subChunks.length > 1 ? `${sec.title} (${idx + 1}/${subChunks.length})` : (sec.title || ""),
-            bodyMarkdown: chunk,
-            cover: false,
-          });
-        });
-      } else {
-        finalSections.push(sec);
-      }
-    }
-  } else {
-    finalSections = sections;
-  }
+  let finalSections = sections;
 
   if (!finalSections.length) {
-    const remainingLines = lines.filter((l) => !/^#\s+/.test(l));
-    const subChunks = splitTextByLength(remainingLines.join("\n"), targetMaxLen);
-    subChunks.forEach((chunk) => {
-      finalSections.push({
-        title: "",
-        bodyMarkdown: chunk,
-        cover: false,
-      });
-    });
+    const remainingLines = lines.filter((_, index) => index !== documentTitleLineIndex);
+    finalSections = [{
+      title: "",
+      bodyMarkdown: remainingLines.join("\n"),
+      cover: false,
+    }];
   }
 
   const validSections = finalSections.filter(
@@ -1155,50 +1173,6 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
   return pages.length ? pages : [createFallbackPage()];
 }
 
-function splitTextByLength(text, maxLength) {
-  if (!text || text.length <= maxLength) return [text];
-
-  const chunks = [];
-  const lines = text.split("\n");
-  let currentChunk = "";
-
-  for (const line of lines) {
-    if ((currentChunk + "\n" + line).length > maxLength && currentChunk.trim().length > 0) {
-      chunks.push(currentChunk.trim());
-      currentChunk = line;
-    } else {
-      currentChunk += (currentChunk ? "\n" : "") + line;
-    }
-  }
-
-  if (currentChunk.trim().length > 0) {
-    chunks.push(currentChunk.trim());
-  }
-
-  const result = [];
-  for (const chunk of chunks) {
-    if (chunk.length <= maxLength) {
-      result.push(chunk);
-    } else {
-      let temp = "";
-      const sentences = chunk.split(/(?<=[。！？.!?\n])/);
-      for (const sentence of sentences) {
-        if ((temp + sentence).length > maxLength && temp.trim().length > 0) {
-          result.push(temp.trim());
-          temp = sentence;
-        } else {
-          temp += sentence;
-        }
-      }
-      if (temp.trim().length > 0) {
-        result.push(temp.trim());
-      }
-    }
-  }
-
-  return result.length ? result : [text];
-}
-
 function cleanMarkdownText(text) {
   return text
     .replace(/^#{1,6}\s+/, "")
@@ -1216,58 +1190,12 @@ function getLineType(text) {
   return "";
 }
 
-async function resolveLocalImages(markdownText, basePath) {
-  if (!markdownText) return markdownText;
-
-  const mdRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-  const mdMatches = [...markdownText.matchAll(mdRegex)];
-  let result = markdownText;
-
-  for (const match of mdMatches) {
-    const alt = match[1];
-    const rawTarget = stripMarkdownLinkTarget(match[2]);
-    const replacement = await tryResolveImage(rawTarget, basePath);
-    if (replacement) {
-      const sourceToken = match[0];
-      const nextToken = `![${alt}](${replacement})`;
-      result = result.replace(sourceToken, nextToken);
-    }
+async function resolveBlockImages(blocks, basePath) {
+  for (const block of blocks || []) {
+    if (block.type !== "image" || !block.src) continue;
+    const replacement = await tryResolveImage(block.src, basePath);
+    if (replacement) block.src = replacement;
   }
-
-  const htmlRegex = /<img\s+([^>]*\s+)?src=["']([^"']+)["']([^>]*)>/gi;
-  const htmlMatches = [...result.matchAll(htmlRegex)];
-
-  for (const match of htmlMatches) {
-    const rawTarget = stripMarkdownLinkTarget(match[2]);
-    const replacement = await tryResolveImage(rawTarget, basePath);
-    if (replacement) {
-      const fullTag = match[0];
-      const newTag = fullTag.replace(match[2], replacement);
-      result = result.replace(fullTag, newTag);
-    }
-  }
-
-  return result;
-}
-
-async function resolveFirstImage(markdownText, basePath) {
-  if (!markdownText) return "";
-
-  const mdMatch = markdownText.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-  if (mdMatch) {
-    const rawTarget = stripMarkdownLinkTarget(mdMatch[2]);
-    const resolved = await tryResolveImage(rawTarget, basePath);
-    if (resolved) return resolved;
-  }
-
-  const htmlMatch = markdownText.match(/<img\s+[^>]*src=["']([^"']+)["'][^>]*>/i);
-  if (htmlMatch) {
-    const rawTarget = stripMarkdownLinkTarget(htmlMatch[1]);
-    const resolved = await tryResolveImage(rawTarget, basePath);
-    if (resolved) return resolved;
-  }
-
-  return "";
 }
 
 async function tryResolveImage(target, basePath) {
@@ -1302,8 +1230,4 @@ async function tryResolveImage(target, basePath) {
 
   imageCache.set(cacheKey, promise);
   return promise;
-}
-
-function stripMarkdownLinkTarget(target) {
-  return target.trim().replace(/^<(.+)>$/, "$1").replace(/\s+["'].*["']$/, "");
 }

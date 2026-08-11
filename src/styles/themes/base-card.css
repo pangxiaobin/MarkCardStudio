@@ -457,3 +457,18 @@
   color: #8b5cf6;
   margin-left: 2px;
 }
+
+.card-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.card-footnote > sup {
+  flex-shrink: 0;
+  font-weight: 800;
+  color: #8b5cf6;
+}

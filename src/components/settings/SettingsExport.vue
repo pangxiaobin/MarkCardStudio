@@ -160,7 +160,7 @@ async function handleOpenExportFolder() {
           </div>
 
           <!-- 画质 Quality Selection -->
-          <div>
+          <div v-if="selectedFormat === 'JPG' || selectedFormat === 'PDF'">
             <label class="mb-1.5 block text-xs font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
               {{ t("publish.quality") }}
               <span class="ml-1 font-normal text-slate-400 dark:text-slate-500 text-[11px]">({{ t("publish.qualityHint") }})</span>
