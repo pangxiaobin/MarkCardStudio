@@ -34,7 +34,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IFlPVVJfVEFVUklfVVBEQVRFUl9QVUJLQVlfSEVSRQ==",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM1RUY4RjIzNjg0QUMyRjAKUldUd3drcG9JNC92eFdlMGMyN3NVeTVvcFZ0Vkh6ak5jL1NVVFpOaFRBZVBIVjZmYUt1MjZ1czYK",
       "endpoints": [
         "https://github.com/pangxiaobin/MarkCardStudio/releases/latest/download/latest.json"
       ]
