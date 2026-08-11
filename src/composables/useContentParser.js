@@ -208,7 +208,7 @@ function getTableMetrics(columnCount) {
   if (columnCount >= 7) {
     return { fontSize: 11, horizontalPadding: 8, lineHeight: 15, verticalPadding: 10, minHeight: 25 };
   }
-  if (columnCount >= 5) {
+  if (columnCount >= 4) {
     return { fontSize: 12, horizontalPadding: 14, lineHeight: 17, verticalPadding: 12, minHeight: 30 };
   }
   return { fontSize: 13.6, horizontalPadding: 24, lineHeight: 20, verticalPadding: 16, minHeight: 38 };
@@ -226,6 +226,12 @@ function estimateTableRowHeight(cells, columnCount, contentWidth = DEFAULT_CONTE
     ...(cells || []).map((cell) => Math.ceil(getVisualLength(cell) / visualUnitsPerLine)),
   );
   return Math.max(metrics.minHeight, lines * metrics.lineHeight + metrics.verticalPadding);
+}
+
+function getTableThemeSafetySpace(columnCount) {
+  // Four-column tables are the tightest common layout on portrait cards.
+  // Reserve room for narrower theme content areas and wider theme fonts.
+  return columnCount === 4 ? 51 : 0;
 }
 
 export function estimateTitleHeight(title, layout = DEFAULT_CONTENT_WIDTH) {
@@ -289,7 +295,7 @@ export function estimateBlockHeight(block, layout = DEFAULT_CONTENT_WIDTH) {
         (height, row) => height + estimateTableRowHeight(row, columnCount, contentWidth),
         0,
       );
-      return headerHeight + rowsHeight + 18;
+      return headerHeight + rowsHeight + 18 + getTableThemeSafetySpace(columnCount);
     }
     // Includes the image wrapper's vertical margins and its 200px max-height.
     case "image": return metrics.imageHeight;
@@ -463,7 +469,9 @@ function splitTableForHeight(block, availableHeight, contentWidth) {
     block.headers?.length || 0,
     ...rows.map((row) => row?.length || 0),
   );
-  let usedHeight = estimateTableRowHeight(block.headers || [], columnCount, contentWidth) + 18;
+  let usedHeight = estimateTableRowHeight(block.headers || [], columnCount, contentWidth)
+    + 18
+    + getTableThemeSafetySpace(columnCount);
   let splitIndex = 0;
 
   for (let index = 0; index < rows.length; index += 1) {
@@ -925,7 +933,7 @@ export function renderBlockToHtml(block) {
       );
       const densityClass = columnCount >= 7
         ? " card-table--compact"
-        : columnCount >= 5
+        : columnCount >= 4
           ? " card-table--dense"
           : "";
       const headers = (block.headers || []).map((h) => `<th>${formatInline(h)}</th>`).join("");
