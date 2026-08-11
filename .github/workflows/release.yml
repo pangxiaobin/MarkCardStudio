@@ -64,29 +64,28 @@ jobs:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         with:
           script: |
+            const fs = require('fs');
             const { owner, repo } = context.repo;
             const tag = process.env.RELEASE_TAG;
-            const releaseNotes = {
-              "v0.1.0": [
-                "### 首个公开版本 / Initial Release",
-                "",
-                "- 支持 Markdown 实时预览、智能分页和页面排序。",
-                "- 内置 16 套卡片主题及小红书、抖音、微博、方形等尺寸预设。",
-                "- 支持代码高亮、KaTeX 公式、Mermaid 图表、表格、脚注和本地图片。",
-                "- 支持导出 PNG、JPG、多页 PDF 和长图 PNG。",
-                "- 提供中英文界面、明暗模式、本地文档读写和草稿恢复。",
-                "",
-                "---",
-                "",
-                "- Live Markdown preview with smart pagination and page reordering.",
-                "- 16 built-in themes with presets for Xiaohongshu, Douyin, Weibo, and square cards.",
-                "- Rich content support including syntax highlighting, KaTeX, Mermaid, tables, footnotes, and local images.",
-                "- Export to PNG, JPG, multipage PDF, and long PNG.",
-                "- English and Simplified Chinese UI, light/dark modes, local document access, and draft recovery.",
-              ].join("\n"),
-            };
-            const changes = releaseNotes[tag]
-              || "See the commit history for changes in this release. / 本版本变更请查看提交记录。";
+
+            let changes = "";
+            try {
+              if (fs.existsSync('CHANGELOG.md')) {
+                const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+                const tagClean = tag.replace(/^v/, '');
+                const tagPattern = new RegExp(`##\\s*\\[?v?${tagClean.replace(/\\./g, '\\.')}\\]?[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
+                const match = changelog.match(tagPattern);
+                if (match && match[1]) {
+                  changes = match[1].trim();
+                }
+              }
+            } catch (error) {
+              console.warn("Failed to parse CHANGELOG.md:", error);
+            }
+
+            if (!changes) {
+              changes = "See the commit history for changes in this release. / 本版本变更请查看提交记录。";
+            }
             const body = [
               "## 更新内容 / What's New",
               "",
