@@ -6,7 +6,7 @@ import { full as markdownItEmoji } from "markdown-it-emoji";
 import markdownItFootnote from "markdown-it-footnote";
 import markdownItTaskLists from "markdown-it-task-lists";
 import { invoke } from "@tauri-apps/api/core";
-import { parseBlocks, splitBlocksIntoPages, blocksToPreviewText, getCardContentHeight } from "./useContentParser.js";
+import { parseBlocks, splitBlocksIntoPages, blocksToPreviewText, getCardContentHeight, estimateTitleHeight } from "./useContentParser.js";
 import { DEFAULT_THEME, THEME_LIST, getThemeByName } from "../config/themes.js";
 import { i18n } from "../i18n/index.js";
 
@@ -606,7 +606,10 @@ export function useStudioDocument() {
           selectedPlatform.value.width,
           selectedPlatform.value.height,
         );
-        const blockPages = splitBlocksIntoPages(allBlocks, contentHeight);
+        const titleHeight = section.title ? estimateTitleHeight(section.title) : 0;
+        const firstPageContentHeight = Math.max(120, contentHeight - titleHeight);
+
+        const blockPages = splitBlocksIntoPages(allBlocks, firstPageContentHeight, contentHeight);
 
         const customMeta = customPageMetas.value[index] || {};
         const baseKicker = customMeta.kicker || section.kicker || globalMeta.value.kicker || "@MarkCard";
@@ -625,6 +628,7 @@ export function useStudioDocument() {
           bodyMarkdown: resolvedMarkdown,
           body: blocksToPreviewText(blockPages[0] || []),
           imageUrl,
+          isOverflow: false,
         });
 
         // Overflow pages (additional block-pages for the same section)
@@ -820,7 +824,7 @@ ${t("document.inputHere")}`;
     parsed.splice(index, 1);
 
     const title = parsed[0]?.cover ? `# ${parsed[0].title}\n\n${parsed[0].bodyMarkdown}` : `# ${t("document.title")}`;
-    const rest = parsed.slice(1).map((sec) => `## ${sec.title}\n${sec.bodyMarkdown}`).join("\n\n");
+    const rest = parsed.slice(1).map((sec) => sec.title ? `## ${sec.title}\n${sec.bodyMarkdown}` : `---\n${sec.bodyMarkdown}`).join("\n\n");
 
     const newContent = `${title}\n\n${rest}`.trim();
     recordDiscreteChange(newContent);
@@ -838,7 +842,7 @@ ${t("document.inputHere")}`;
     parsed.splice(toIndex, 0, moved);
 
     const title = parsed[0]?.cover ? `# ${parsed[0].title}\n\n${parsed[0].bodyMarkdown}` : `# ${t("document.title")}`;
-    const rest = parsed.slice(1).map((sec) => `## ${sec.title}\n${sec.bodyMarkdown}`).join("\n\n");
+    const rest = parsed.slice(1).map((sec) => sec.title ? `## ${sec.title}\n${sec.bodyMarkdown}` : `---\n${sec.bodyMarkdown}`).join("\n\n");
 
     const newContent = `${title}\n\n${rest}`.trim();
     recordDiscreteChange(newContent);
@@ -1071,7 +1075,7 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
         /^---$|^\*\*\*$|^<!--\s*page\s*-->/i.test(line.trim()) ||
         (mode === "delimiter" && line.trim() === delimiter?.trim());
       currentSection = {
-        title: isExplicitBreak ? t("document.numberedPage", { number: sections.length + 2 }) : cleanMarkdownText(line),
+        title: isExplicitBreak ? "" : cleanMarkdownText(line),
         bodyMarkdown: "",
         cover: false,
       };
@@ -1099,7 +1103,7 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
         const subChunks = splitTextByLength(bodyText, targetMaxLen);
         subChunks.forEach((chunk, idx) => {
           finalSections.push({
-            title: subChunks.length > 1 ? `${sec.title} (${idx + 1}/${subChunks.length})` : sec.title,
+            title: sec.title && subChunks.length > 1 ? `${sec.title} (${idx + 1}/${subChunks.length})` : (sec.title || ""),
             bodyMarkdown: chunk,
             cover: false,
           });
@@ -1115,25 +1119,30 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
   if (!finalSections.length) {
     const remainingLines = lines.filter((l) => !/^#\s+/.test(l));
     const subChunks = splitTextByLength(remainingLines.join("\n"), targetMaxLen);
-    subChunks.forEach((chunk, idx) => {
+    subChunks.forEach((chunk) => {
       finalSections.push({
-        title: t("document.numberedPage", { number: idx + 1 }),
+        title: "",
         bodyMarkdown: chunk,
         cover: false,
       });
     });
   }
 
-  const coverBodyMarkdown = introLines.join("\n").trim() || t("document.coverBody");
+  const validSections = finalSections.filter(
+    (sec) => Boolean(sec.title && sec.title.trim()) || Boolean(sec.bodyMarkdown && sec.bodyMarkdown.trim())
+  );
+  const sectionsToRender = validSections.length ? validSections : finalSections;
+
+  const coverBodyMarkdown = introLines.join("\n").trim();
   const pages = [
     {
       title: documentTitle,
       bodyMarkdown: coverBodyMarkdown,
       cover: true,
     },
-    ...finalSections.map((section) => ({
+    ...sectionsToRender.map((section) => ({
       title: section.title,
-      bodyMarkdown: section.bodyMarkdown.trim() || t("document.continueBody"),
+      bodyMarkdown: section.bodyMarkdown.trim(),
       cover: false,
     })),
   ];

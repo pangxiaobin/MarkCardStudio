@@ -424,12 +424,14 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     posterNode.appendChild(headerNode);
   }
 
+  const titleHtml = (!page?.isOverflow && page?.title) ? `<h1>${page.title}</h1>` : "";
+
   cardNode.innerHTML = `
     <div class="leaf-shadow top"></div>
     <div class="leaf-shadow side"></div>
     ${stickerHtml}
     <div class="card-scroll-area">
-      <h1>${page?.title || ""}</h1>
+      ${titleHtml}
       <div class="card-body">
         ${bodyHtml}
       </div>
@@ -463,8 +465,14 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     // image in the exported PNG even though the preview displays it.
     await inlineImagesForExport(posterNode);
     await rasterizeCoverStickersForExport(posterNode);
-    // Let the browser settle fonts / CSS
-    await new Promise((r) => setTimeout(r, 150));
+
+    // Ensure all images (content images, stickers, math formula PNGs, mermaid diagrams)
+    // are 100% loaded and decoded in bitmap memory before canvas capture
+    const allImages = Array.from(posterNode.querySelectorAll("img"));
+    await Promise.all(allImages.map((img) => waitForImageDecode(img)));
+
+    // Let the browser settle fonts, CSS, and GPU texture uploads (prevents first-export blank images)
+    await new Promise((r) => setTimeout(r, 250));
 
     const captureOptions = {
       pixelRatio: renderPixelRatio,
@@ -580,6 +588,25 @@ function inlineMermaidForExport(root) {
   }
 }
 
+function convertImageElementToDataUrl(img) {
+  try {
+    const width = img.naturalWidth || img.width || 300;
+    const height = img.naturalHeight || img.height || 200;
+    if (width === 0 || height === 0) return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL("image/png");
+  } catch (_) {
+    return null;
+  }
+}
+
 /**
  * Make every image a ready-to-render data URL before html-to-image clones the
  * export DOM. Local images are already data URLs, while remote/blob images are
@@ -587,29 +614,46 @@ function inlineMermaidForExport(root) {
  */
 async function inlineImagesForExport(root) {
   const imgEls = Array.from(root.querySelectorAll("img"));
-  await Promise.all(imgEls.map(async (img) => {
-    const source = img.currentSrc || img.src;
-    if (!source) return;
+  await Promise.all(
+    imgEls.map(async (img) => {
+      const source = img.currentSrc || img.src;
+      if (!source) return;
 
-    if (!/^data:/i.test(source)) {
-      try {
-        const response = await fetch(source, { mode: "cors" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        const dataUrl = await blobToDataUrl(blob);
+      if (/^data:/i.test(img.src)) {
+        img.srcset = "";
+        return;
+      }
+
+      // First, ensure image is decoded in DOM
+      await waitForImageDecode(img);
+
+      // Attempt 1: Direct 2D canvas drawing (extracts decoded pixels from DOM element without network fetch)
+      let dataUrl = null;
+      if (img.complete && img.naturalWidth > 0) {
+        dataUrl = convertImageElementToDataUrl(img);
+      }
+
+      // Attempt 2: If canvas extraction failed (e.g. CORS), fetch source using absolute URL
+      if (!dataUrl) {
+        try {
+          const absoluteUrl = new URL(source, window.location.href).href;
+          const response = await fetch(absoluteUrl, { mode: "cors" });
+          if (response.ok) {
+            const blob = await response.blob();
+            dataUrl = await blobToDataUrl(blob);
+          }
+        } catch (error) {
+          console.warn(`Failed to inline image for export: ${source}`, error);
+        }
+      }
+
+      if (dataUrl) {
         img.srcset = "";
         img.src = dataUrl;
-      } catch (error) {
-        // Keep the original source as a fallback. A broken image should not
-        // prevent text-only cards (or other pages) from being exported.
-        console.warn(`Failed to inline image for export: ${source}`, error);
+        await waitForImageDecode(img);
       }
-    } else {
-      img.srcset = "";
-    }
-
-    await waitForImageDecode(img);
-  }));
+    }),
+  );
 }
 
 /** Replace cover SVG sources with PNG data before the final DOM capture. */
@@ -620,16 +664,23 @@ async function rasterizeCoverStickersForExport(root) {
     try {
       await waitForImageDecode(sticker);
 
-      const canvas = document.createElement("canvas");
-      canvas.width = 192;
-      canvas.height = 192;
-      const context = canvas.getContext("2d");
-      if (!context) continue;
+      let dataUrl = convertImageElementToDataUrl(sticker);
+      if (!dataUrl) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 192;
+        canvas.height = 192;
+        const context = canvas.getContext("2d");
+        if (context) {
+          context.drawImage(sticker, 0, 0, canvas.width, canvas.height);
+          dataUrl = canvas.toDataURL("image/png");
+        }
+      }
 
-      context.drawImage(sticker, 0, 0, canvas.width, canvas.height);
-      sticker.srcset = "";
-      sticker.src = canvas.toDataURL("image/png");
-      await waitForImageDecode(sticker);
+      if (dataUrl) {
+        sticker.srcset = "";
+        sticker.src = dataUrl;
+        await waitForImageDecode(sticker);
+      }
     } catch (error) {
       // Keep the already-inlined SVG as a fallback for image export.
       console.warn("Failed to rasterize cover sticker for export", error);
@@ -638,21 +689,35 @@ async function rasterizeCoverStickersForExport(root) {
 }
 
 function waitForImageDecode(img) {
-  if (img.complete) {
-    return typeof img.decode === "function"
-      ? img.decode().catch(() => undefined)
-      : Promise.resolve();
-  }
+  if (!img) return Promise.resolve();
 
   return new Promise((resolve) => {
-    const done = () => {
-      img.onload = null;
-      img.onerror = null;
+    if (img.complete && img.naturalWidth > 0) {
+      resolve();
+      return;
+    }
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      img.removeEventListener("load", finish);
+      img.removeEventListener("error", finish);
       resolve();
     };
-    img.onload = done;
-    img.onerror = done;
-  }).then(() => (typeof img.decode === "function" ? img.decode().catch(() => undefined) : undefined));
+
+    if (img.complete && img.naturalWidth > 0) {
+      finish();
+    } else {
+      img.addEventListener("load", finish);
+      img.addEventListener("error", finish);
+      setTimeout(finish, 800);
+    }
+  }).then(() => {
+    if (typeof img.decode === "function") {
+      return img.decode().catch(() => undefined);
+    }
+  });
 }
 
 function blobToDataUrl(blob) {

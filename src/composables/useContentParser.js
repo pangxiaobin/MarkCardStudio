@@ -64,27 +64,57 @@ hljs.registerLanguage("c", langCpp);
 // ─── Height estimation constants ─────────────────────────────────────────────
 const CHARS_PER_LINE = 34;
 
+// ─── Height estimation constants ─────────────────────────────────────────────
 function estimateTextLines(text) {
-  // CJK glyphs are wider than Latin glyphs at the same font size. Giving them
-  // extra weight keeps pagination close to the actual
-  // card layout instead of allowing a paragraph to overflow its article.
-  const visualLength = Array.from(text || "").reduce(
-    (length, character) => length + (/[⺀-鿿豈-﫿]/.test(character) ? 1.5 : 1),
+  if (!text) return 1;
+  const visualLength = Array.from(text).reduce(
+    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 1.0 : 0.55),
     0,
   );
-  return Math.max(1, Math.ceil(visualLength / CHARS_PER_LINE));
+  // Content inner width at 450px portrait reference size fits ~26 visual units per line
+  return Math.max(1, Math.ceil(visualLength / 26));
+}
+
+export function estimateTitleHeight(title) {
+  if (!title || !title.trim()) return 0;
+  const visualLength = Array.from(title.trim()).reduce(
+    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 1.0 : 0.55),
+    0,
+  );
+  // Card title font size ~1.4rem (~22-24px bold) fits ~15 CJK visual units per line
+  const lines = Math.max(1, Math.ceil(visualLength / 15));
+  // Title lines (32px each) plus red divider bar & bottom margin ~28px
+  return lines * 32 + 28;
 }
 
 export function estimateBlockHeight(block) {
   switch (block.type) {
     case "heading2": return 46;
     case "heading3": return 36;
-    case "paragraph": return estimateTextLines(block.content) * 26 + 8;
+    case "paragraph": return estimateTextLines(block.content) * 24 + 8;
     case "blockquote":
-      return (block.lines || []).reduce((h, l) => h + estimateTextLines(l) * 26, 0) + 24;
-    case "list": return (block.items?.length || 1) * 30 + 8;
-    case "ordered-list": return (block.items?.length || 1) * 30 + 8;
-    case "task-list": return (block.items?.length || 1) * 32 + 8;
+      return (block.lines || []).reduce((h, l) => h + estimateTextLines(l) * 24, 0) + 20;
+    case "list": {
+      const itemsH = (block.items || []).reduce(
+        (acc, item) => acc + estimateTextLines(typeof item === "string" ? item : (item?.text || "")) * 22 + 6,
+        0,
+      );
+      return Math.max(28, itemsH + 10);
+    }
+    case "ordered-list": {
+      const itemsH = (block.items || []).reduce(
+        (acc, item) => acc + estimateTextLines(typeof item === "string" ? item : (item?.text || "")) * 22 + 6,
+        0,
+      );
+      return Math.max(28, itemsH + 10);
+    }
+    case "task-list": {
+      const itemsH = (block.items || []).reduce(
+        (acc, item) => acc + estimateTextLines(item?.text || "") * 22 + 6,
+        0,
+      );
+      return Math.max(28, itemsH + 10);
+    }
     case "code-block": return Math.min((block.lines?.length || 1) * 20 + 32, 220);
     // Mermaid is fitted into a 180px-high static viewport plus wrapper space.
     case "mermaid": return 218;
@@ -92,6 +122,7 @@ export function estimateBlockHeight(block) {
     // Includes the image wrapper's vertical margins and its 200px max-height.
     case "image": return 236;
     case "divider": return 24;
+    case "callout": return estimateTextLines((block.title || "") + (block.content || "")) * 22 + 28;
     default: return 28;
   }
 }
@@ -99,12 +130,12 @@ export function estimateBlockHeight(block) {
 /**
  * Max estimated usable content height in px (at 450px base portrait width).
  */
-export const CARD_CONTENT_HEIGHT = 380;
+export const CARD_CONTENT_HEIGHT = 360;
 
 /**
  * Calculate usable body height for the selected platform at the same design
  * viewport used by preview/export. Header, footer, poster padding and title
- * occupy about 220px at the 450px-wide portrait reference size.
+ * occupy about 240px at the 450px-wide portrait reference size.
  */
 export function getCardContentHeight(platformWidth, platformHeight) {
   const width = Number(platformWidth) || 1080;
@@ -118,24 +149,139 @@ export function getCardContentHeight(platformWidth, platformHeight) {
 
 /**
  * Split block array into pages such that each page's estimated height ≤ maxHeight.
+ * Supports partial list splitting to eliminate large blank spaces, and binds intro prompts to lists.
  */
-export function splitBlocksIntoPages(blocks, maxHeight = CARD_CONTENT_HEIGHT) {
-  if (!blocks.length) return [[]];
-  const pages = [];
-  let current = [];
-  let height = 0;
+function splitParagraphContent(text, availableHeight) {
+  if (!text || text.length < 120) return { part1: text, part2: "" };
+  const maxLines = Math.max(1, Math.floor((availableHeight - 8) / 24));
+  const maxVisualUnits = maxLines * 26;
 
-  for (const block of blocks) {
-    const bh = estimateBlockHeight(block);
-    if (current.length > 0 && height + bh > maxHeight) {
-      pages.push(current);
-      current = [block];
-      height = bh;
-    } else {
-      current.push(block);
-      height += bh;
+  const chars = Array.from(text);
+  let units = 0;
+  let splitIndex = 0;
+
+  for (let i = 0; i < chars.length; i++) {
+    const charUnit = /[⺀-鿿豈-﫿]/.test(chars[i]) ? 1.0 : 0.55;
+    if (units + charUnit > maxVisualUnits) {
+      break;
+    }
+    units += charUnit;
+    splitIndex = i + 1;
+  }
+
+  if (splitIndex <= 0 || splitIndex >= chars.length) {
+    return { part1: text, part2: "" };
+  }
+
+  const puncRegex = /[。！？\n.!?]/;
+  let bestSplit = splitIndex;
+  for (let k = splitIndex; k >= Math.max(0, splitIndex - 30); k--) {
+    if (puncRegex.test(chars[k] || "")) {
+      bestSplit = k + 1;
+      break;
     }
   }
+
+  const part1 = chars.slice(0, bestSplit).join("").trim();
+  const part2 = chars.slice(bestSplit).join("").trim();
+
+  if (part1 && part2) {
+    return { part1, part2 };
+  }
+  return { part1: text, part2: "" };
+}
+
+/**
+ * Split block array into pages such that each page's estimated height ≤ maxHeight.
+ * Preserves 100% strict sequential order of all blocks in the document.
+ */
+export function splitBlocksIntoPages(blocks, firstPageMaxHeight = CARD_CONTENT_HEIGHT, overflowMaxHeight = CARD_CONTENT_HEIGHT) {
+  if (!blocks || !blocks.length) return [[]];
+  const pages = [];
+  let current = [];
+  let currentHeight = 0;
+
+  for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
+    const block = blocks[bIdx];
+    const isFirstPage = pages.length === 0;
+    const maxHeight = isFirstPage ? firstPageMaxHeight : overflowMaxHeight;
+    const bh = estimateBlockHeight(block);
+
+    // If block fits on current page
+    if (current.length === 0 || currentHeight + bh <= maxHeight) {
+      current.push(block);
+      currentHeight += bh;
+      continue;
+    }
+
+    // Block does not fit on current page.
+    const remainingSpace = maxHeight - currentHeight;
+
+    // Strategy 1: Try splitting multi-item list if current page has remaining space for at least 1 item
+    if (
+      (block.type === "ordered-list" || block.type === "list" || block.type === "task-list") &&
+      Array.isArray(block.items) &&
+      block.items.length > 1 &&
+      remainingSpace >= 28
+    ) {
+      const subList1Items = [];
+      const subList2Items = [];
+      let itemsH = 0;
+
+      for (const item of block.items) {
+        const itemText = typeof item === "string" ? item : (item?.text || "");
+        const itemHeight = estimateTextLines(itemText) * 22 + 6;
+        if (itemsH + itemHeight <= remainingSpace) {
+          subList1Items.push(item);
+          itemsH += itemHeight;
+        } else {
+          subList2Items.push(item);
+        }
+      }
+
+      if (subList1Items.length > 0 && subList2Items.length > 0) {
+        const startIdx = block.startIndex || 0;
+        current.push({ ...block, items: subList1Items, startIndex: startIdx });
+        pages.push(current);
+        current = [];
+        currentHeight = 0;
+
+        const remainingBlock = {
+          ...block,
+          items: subList2Items,
+          startIndex: startIdx + subList1Items.length,
+        };
+        const remainingH = estimateBlockHeight(remainingBlock);
+        current.push(remainingBlock);
+        currentHeight = remainingH;
+        continue;
+      }
+    }
+
+    // Strategy 2: If no list items fit on current page, check if last block on current page is an intro prompt (ending with ":" or "：")
+    if (current.length > 1) {
+      const lastBlock = current[current.length - 1];
+      if (
+        lastBlock &&
+        (lastBlock.type === "paragraph" || lastBlock.type.startsWith("heading")) &&
+        typeof lastBlock.content === "string" &&
+        /[：:]\s*$/.test(lastBlock.content.trim())
+      ) {
+        current.pop();
+        pages.push(current);
+
+        current = [lastBlock, block];
+        currentHeight = estimateBlockHeight(lastBlock) + bh;
+        continue;
+      }
+    }
+
+    // Default: Close current page and start next page with this block
+    pages.push(current);
+    current = [block];
+    currentHeight = bh;
+  }
+
   if (current.length) pages.push(current);
   return pages;
 }
@@ -446,9 +592,10 @@ export function renderBlockToHtml(block) {
     }
 
     case "ordered-list": {
+      const startIdx = block.startIndex || 0;
       const items = (block.items || [])
         .map((item, idx) => {
-          const numStr = String(idx + 1).padStart(2, "0");
+          const numStr = String(startIdx + idx + 1).padStart(2, "0");
           return `<li class="card-ordered-item flex items-start gap-2.5 py-0.5"><span class="list-num-badge shrink-0">${numStr}</span><span class="flex-1 min-w-0">${formatInline(item)}</span></li>`;
         })
         .join("");

@@ -157,7 +157,7 @@ const defaultDateString = computed(() => {
       <!-- Scrollable Content Area -->
       <div class="card-scroll-area">
         <!-- Card Title -->
-        <h1>{{ activePage.title }}</h1>
+        <h1 v-if="!activePage.isOverflow && activePage.title">{{ activePage.title }}</h1>
 
         <!-- Block-rendered body content -->
         <div class="card-body" v-html="renderedBody"></div>
