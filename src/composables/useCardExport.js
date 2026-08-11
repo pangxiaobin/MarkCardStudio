@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getFontEmbedCSS, toCanvas } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { nextTick } from "vue";
-import { parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "./useContentParser.js";
+import { getCardLayoutClass, parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "./useContentParser.js";
 import { getCoverStickers } from "../config/coverStickers.js";
 import { i18n } from "../i18n/index.js";
 
@@ -398,7 +398,8 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
   // differences here change flex distribution and make export diverge from
   // what the user sees in the preview.
   const isCover = Boolean(page?.cover);
-  cardNode.className = `card-canvas ${themeClass} ${isCover ? "is-cover" : ""} group/card relative flex-1 flex flex-col h-full w-full rounded-xl overflow-hidden shadow-md border border-black/5 dark:border-white/10`;
+  const cardLayoutClass = getCardLayoutClass(width, height);
+  cardNode.className = `card-canvas ${themeClass} ${cardLayoutClass} ${isCover ? "is-cover" : ""} group/card relative flex-1 flex flex-col h-full w-full rounded-xl overflow-hidden shadow-md border border-black/5 dark:border-white/10`;
   cardNode.style.margin = "0";
   cardNode.style.boxSizing = "border-box";
 

@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import AppIcon from "../AppIcon.vue";
-import { parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "../../composables/useContentParser.js";
+import { getCardLayoutClass, parseBlocks, renderBlocksToHtml, renderMermaidDiagrams } from "../../composables/useContentParser.js";
 import { getCoverStickers } from "../../config/coverStickers.js";
 
 const props = defineProps({
@@ -33,24 +33,58 @@ const { t } = useI18n();
 
 defineExpose({ getCanvasElement: () => canvasElement.value });
 
-// Outer frame style (background / dimensions)
-const outerFrameStyle = computed(() => {
+const previewGeometry = computed(() => {
   const width = props.selectedPlatform?.width || 1080;
   const height = props.selectedPlatform?.height || 1440;
   const zoomFactor = props.zoom / 74;
-
   const isLandscape = width > height;
-  let dims = {};
 
   if (isLandscape) {
-    const maxW = Math.min(680, Math.round(540 * zoomFactor));
-    const calcH = Math.round(maxW * (height / width));
-    dims = { width: `${maxW}px`, height: `${calcH}px`, aspectRatio: `${width} / ${height}`, "--preview-zoom": `${zoomFactor}` };
-  } else {
-    const maxH = Math.min(620, Math.round(540 * zoomFactor));
-    const calcW = Math.round(maxH * (width / height));
-    dims = { width: `${calcW}px`, height: `${maxH}px`, aspectRatio: `${width} / ${height}`, "--preview-zoom": `${zoomFactor}` };
+    const baseWidth = 640;
+    const baseHeight = Math.round(baseWidth * (height / width));
+    const displayWidth = Math.min(680, Math.round(540 * zoomFactor));
+    const scale = displayWidth / baseWidth;
+    return {
+      baseWidth,
+      baseHeight,
+      displayWidth,
+      displayHeight: Math.round(baseHeight * scale),
+      scale,
+    };
   }
+
+  const baseWidth = 450;
+  const baseHeight = Math.round(baseWidth * (height / width));
+  const displayHeight = Math.min(620, Math.round(540 * zoomFactor));
+  const scale = displayHeight / baseHeight;
+  return {
+    baseWidth,
+    baseHeight,
+    displayWidth: Math.round(baseWidth * scale),
+    displayHeight,
+    scale,
+  };
+});
+
+const previewFrameStyle = computed(() => ({
+  width: `${previewGeometry.value.displayWidth}px`,
+  height: `${previewGeometry.value.displayHeight}px`,
+}));
+
+const cardLayoutClass = computed(() => getCardLayoutClass(
+  props.selectedPlatform?.width,
+  props.selectedPlatform?.height,
+));
+
+// Render at the same design size as export, then scale the whole poster for preview.
+const posterCanvasStyle = computed(() => {
+  const geometry = previewGeometry.value;
+  const dims = {
+    width: `${geometry.baseWidth}px`,
+    height: `${geometry.baseHeight}px`,
+    transform: `scale(${geometry.scale})`,
+    transformOrigin: "top left",
+  };
 
   if (props.transparentBackground) {
     return { ...dims, background: "transparent", backgroundColor: "transparent", backgroundImage: "none" };
@@ -99,12 +133,16 @@ const defaultDateString = computed(() => {
 </script>
 
 <template>
-  <!-- Outer Poster Canvas Frame -->
   <div
-    ref="canvasElement"
-    class="poster-canvas-frame relative flex flex-col justify-between p-4 sm:p-5 overflow-hidden rounded-2xl shadow-xl transition-all duration-200 select-none"
-    :style="outerFrameStyle"
+    class="relative shrink-0"
+    :style="previewFrameStyle"
   >
+    <!-- Outer Poster Canvas Frame -->
+    <div
+      ref="canvasElement"
+      class="poster-canvas-frame absolute left-0 top-0 flex flex-col justify-between p-5 overflow-hidden rounded-2xl shadow-xl transition-all duration-200 select-none"
+      :style="posterCanvasStyle"
+    >
     <!-- Top Header (on outer background) -->
     <div
       v-if="showTopLeft || showTopRight"
@@ -123,7 +161,7 @@ const defaultDateString = computed(() => {
     <!-- Inner Card Canvas (theme-controlled) -->
     <article
       class="card-canvas group/card relative flex-1 flex flex-col h-full w-full rounded-xl overflow-hidden shadow-md border border-black/5 dark:border-white/10"
-      :class="[selectedThemeClass, { 'is-cover': activePage.cover }]"
+      :class="[selectedThemeClass, cardLayoutClass, { 'is-cover': activePage.cover }]"
     >
       <div class="leaf-shadow top"></div>
       <div class="leaf-shadow side"></div>
@@ -164,19 +202,20 @@ const defaultDateString = computed(() => {
       </div>
     </article>
 
-    <!-- Bottom Footer (on outer background) -->
-    <div
-      v-if="showBottomLeft || showBottomRight"
-      class="poster-footer z-10 flex items-center justify-between text-xs pt-2.5 px-1 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]"
-    >
-      <div v-if="showBottomLeft" class="font-mono text-[11px] opacity-85 shrink-0">
-        <span>{{ activePage.date || defaultDateString }}</span>
-      </div>
-      <div v-else></div>
+      <!-- Bottom Footer (on outer background) -->
+      <div
+        v-if="showBottomLeft || showBottomRight"
+        class="poster-footer z-10 flex items-center justify-between text-xs pt-2.5 px-1 text-slate-800 dark:text-slate-100 drop-shadow-xs min-h-[24px]"
+      >
+        <div v-if="showBottomLeft" class="font-mono text-[11px] opacity-85 shrink-0">
+          <span>{{ activePage.date || defaultDateString }}</span>
+        </div>
+        <div v-else></div>
 
-      <strong v-if="showBottomRight" class="truncate text-right font-medium text-[11px] max-w-[70%] opacity-90">
-        {{ activePage.quote || t("runtime.defaultQuote") }}
-      </strong>
+        <strong v-if="showBottomRight" class="truncate text-right font-medium text-[11px] max-w-[70%] opacity-90">
+          {{ activePage.quote || t("runtime.defaultQuote") }}
+        </strong>
+      </div>
     </div>
   </div>
 </template>

@@ -18,6 +18,7 @@
   z-index: 1;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow-y: hidden;
   padding-right: 4px;
 }
@@ -37,7 +38,44 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
   gap: 10px;
+}
+
+.card-canvas.card-layout-landscape .card-body,
+.card-canvas.card-layout-square .card-body {
+  gap: 8px;
+}
+
+.card-canvas.card-layout-landscape .card-paragraph {
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.card-canvas.card-layout-landscape .card-list li,
+.card-canvas.card-layout-landscape .card-ordered-list li,
+.card-canvas.card-layout-landscape .card-task-item {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.card-canvas.card-layout-landscape .card-h2 {
+  margin: 8px 0 4px;
+  font-size: 1.05rem;
+}
+
+.card-canvas.card-layout-landscape .card-h3 {
+  margin: 6px 0 3px;
+  font-size: 0.95rem;
+}
+
+.card-canvas.card-layout-square .card-h2 {
+  margin: 10px 0 5px;
+}
+
+.card-canvas.card-layout-square .card-h3 {
+  margin: 8px 0 4px;
 }
 
 /* Headings & Text */
@@ -170,6 +208,8 @@
 /* Code Blocks */
 .card-code-block {
   position: relative;
+  width: 100%;
+  min-width: 0;
   margin: 8px 0;
   border-radius: 10px;
   overflow: hidden;
@@ -189,12 +229,26 @@
 }
 
 .card-code-block pre {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   padding: 12px 14px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.82rem;
   line-height: 1.5;
-  overflow-x: auto;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.card-code-block code {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: inherit;
 }
 
 .inline-code {
@@ -206,26 +260,56 @@
 
 /* Tables */
 .card-table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin: 8px 0;
-  overflow-x: auto;
+  overflow: hidden;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .card-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.85rem;
+  line-height: 1.45;
   text-align: left;
 }
 
 .card-table th, .card-table td {
+  min-width: 0;
   padding: 8px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .card-table th {
   font-weight: 700;
+}
+
+.card-table--dense {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.card-table--dense th,
+.card-table--dense td {
+  padding: 6px 7px;
+}
+
+.card-table--compact {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.card-table--compact th,
+.card-table--compact td {
+  padding: 5px 4px;
 }
 
 /* Images */
@@ -247,6 +331,22 @@
   border-radius: 8px;
 }
 
+.card-canvas.card-layout-landscape .card-image-wrap {
+  max-height: 140px;
+}
+
+.card-canvas.card-layout-landscape .card-image {
+  max-height: 124px;
+}
+
+.card-canvas.card-layout-square .card-image-wrap {
+  max-height: 180px;
+}
+
+.card-canvas.card-layout-square .card-image {
+  max-height: 164px;
+}
+
 /* Static media blocks must fit the card instead of creating scrollable areas. */
 .mermaid-raw-box {
   width: 100%;
@@ -262,6 +362,16 @@
   max-height: 180px;
   height: auto;
   object-fit: contain;
+}
+
+.card-canvas.card-layout-landscape .mermaid-diagram,
+.card-canvas.card-layout-landscape .mermaid-export-image {
+  max-height: 120px;
+}
+
+.card-canvas.card-layout-square .mermaid-diagram,
+.card-canvas.card-layout-square .mermaid-export-image {
+  max-height: 150px;
 }
 
 .katex-display-block {

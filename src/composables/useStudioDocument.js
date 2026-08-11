@@ -6,7 +6,7 @@ import { full as markdownItEmoji } from "markdown-it-emoji";
 import markdownItFootnote from "markdown-it-footnote";
 import markdownItTaskLists from "markdown-it-task-lists";
 import { invoke } from "@tauri-apps/api/core";
-import { parseBlocks, splitBlocksIntoPages, blocksToPreviewText, getCardContentHeight, estimateTitleHeight } from "./useContentParser.js";
+import { parseBlocks, splitBlocksIntoPages, blocksToPreviewText, getCardLayoutMetrics, estimateTitleHeight } from "./useContentParser.js";
 import { DEFAULT_THEME, THEME_LIST, getThemeByName } from "../config/themes.js";
 import { i18n } from "../i18n/index.js";
 
@@ -602,14 +602,19 @@ export function useStudioDocument() {
         // Parse raw markdown into blocks, then split using the selected
         // platform's actual aspect-ratio height at the design viewport.
         const allBlocks = parseBlocks(resolvedMarkdown.split("\n"));
-        const contentHeight = getCardContentHeight(
+        const cardLayout = getCardLayoutMetrics(
           selectedPlatform.value.width,
           selectedPlatform.value.height,
         );
-        const titleHeight = section.title ? estimateTitleHeight(section.title) : 0;
-        const firstPageContentHeight = Math.max(120, contentHeight - titleHeight);
+        const titleHeight = section.title ? estimateTitleHeight(section.title, cardLayout) : 0;
+        const firstPageContentHeight = Math.max(120, cardLayout.contentHeight - titleHeight);
 
-        const blockPages = splitBlocksIntoPages(allBlocks, firstPageContentHeight, contentHeight);
+        const blockPages = splitBlocksIntoPages(
+          allBlocks,
+          firstPageContentHeight,
+          cardLayout.contentHeight,
+          cardLayout,
+        );
 
         const customMeta = customPageMetas.value[index] || {};
         const baseKicker = customMeta.kicker || section.kicker || globalMeta.value.kicker || "@MarkCard";

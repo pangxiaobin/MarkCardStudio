@@ -62,67 +62,239 @@ hljs.registerLanguage("cpp", langCpp);
 hljs.registerLanguage("c", langCpp);
 
 // ─── Height estimation constants ─────────────────────────────────────────────
-const CHARS_PER_LINE = 34;
+const DEFAULT_CONTENT_WIDTH = 366;
+const CODE_LINE_HEIGHT = 20;
+const CODE_BLOCK_VERTICAL_SPACE = 40;
+const LAYOUT_PROFILES = {
+  landscape: {
+    className: "card-layout-landscape",
+    designWidth: 640,
+    verticalReserve: 148,
+    minContentHeight: 96,
+    bodyGap: 8,
+    paragraphLineHeight: 22,
+    paragraphExtra: 6,
+    listLineHeight: 21,
+    listItemGap: 5,
+    heading2Height: 36,
+    heading3Height: 30,
+    imageHeight: 156,
+    mermaidHeight: 156,
+    titleUnitWidth: 28,
+  },
+  square: {
+    className: "card-layout-square",
+    designWidth: 450,
+    verticalReserve: 154,
+    minContentHeight: 180,
+    bodyGap: 8,
+    paragraphLineHeight: 23,
+    paragraphExtra: 6,
+    listLineHeight: 22,
+    listItemGap: 5,
+    heading2Height: 40,
+    heading3Height: 32,
+    imageHeight: 196,
+    mermaidHeight: 188,
+    titleUnitWidth: 23,
+  },
+  portrait: {
+    className: "card-layout-portrait",
+    designWidth: 450,
+    verticalReserve: 158,
+    minContentHeight: 180,
+    bodyGap: 10,
+    paragraphLineHeight: 24,
+    paragraphExtra: 8,
+    listLineHeight: 22,
+    listItemGap: 6,
+    heading2Height: 46,
+    heading3Height: 36,
+    imageHeight: 236,
+    mermaidHeight: 218,
+    titleUnitWidth: 23,
+  },
+  tall: {
+    className: "card-layout-tall",
+    designWidth: 450,
+    verticalReserve: 164,
+    minContentHeight: 220,
+    bodyGap: 10,
+    paragraphLineHeight: 24,
+    paragraphExtra: 8,
+    listLineHeight: 22,
+    listItemGap: 6,
+    heading2Height: 46,
+    heading3Height: 36,
+    imageHeight: 236,
+    mermaidHeight: 218,
+    titleUnitWidth: 23,
+  },
+};
 
-// ─── Height estimation constants ─────────────────────────────────────────────
-function estimateTextLines(text) {
+function resolveLayoutMetrics(layout = DEFAULT_CONTENT_WIDTH) {
+  if (layout && typeof layout === "object" && Number.isFinite(layout.contentWidth)) {
+    return layout;
+  }
+
+  const contentWidth = Number(layout) || DEFAULT_CONTENT_WIDTH;
+  return {
+    ...LAYOUT_PROFILES.portrait,
+    contentWidth,
+    textUnitsPerLine: Math.max(12, contentWidth / 14.08),
+  };
+}
+
+function getVisualLength(text, latinWeight = 0.55) {
+  return Array.from(String(text ?? "")).reduce(
+    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 1.0 : latinWeight),
+    0,
+  );
+}
+
+function hasBalancedInlineMarkup(text) {
+  const source = String(text ?? "").replace(/\\./g, "");
+  const pairedMarkers = ["`", "**", "~~", "==", "$", "*", "_"];
+
+  for (const marker of pairedMarkers) {
+    const matches = source.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+    if ((matches?.length || 0) % 2 !== 0) return false;
+  }
+
+  return (source.match(/\[/g)?.length || 0) === (source.match(/\]/g)?.length || 0)
+    && (source.match(/\(/g)?.length || 0) === (source.match(/\)/g)?.length || 0)
+    && (source.match(/</g)?.length || 0) === (source.match(/>/g)?.length || 0);
+}
+
+function estimateTextLines(text, layout = DEFAULT_CONTENT_WIDTH) {
   if (!text) return 1;
-  const visualLength = Array.from(text).reduce(
-    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 1.0 : 0.55),
-    0,
-  );
-  // Content inner width at 450px portrait reference size fits ~26 visual units per line
-  return Math.max(1, Math.ceil(visualLength / 26));
+  const metrics = resolveLayoutMetrics(layout);
+  const visualLength = getVisualLength(text);
+  return Math.max(1, Math.ceil(visualLength / metrics.textUnitsPerLine));
 }
 
-export function estimateTitleHeight(title) {
+function getCodeColumnCapacity(contentWidth = DEFAULT_CONTENT_WIDTH) {
+  const availableWidth = Math.max(80, contentWidth - 28);
+  return Math.max(12, Math.floor(availableWidth / 7.5));
+}
+
+function estimateCodeLineCount(line, contentWidth = DEFAULT_CONTENT_WIDTH) {
+  const columns = getCodeColumnCapacity(contentWidth);
+  const expanded = String(line ?? "").replace(/\t/g, "  ");
+  const units = Array.from(expanded).reduce(
+    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 2 : 1),
+    0,
+  );
+  return Math.max(1, Math.ceil(units / columns));
+}
+
+function splitCodeLineAtVisualUnits(line, maxUnits) {
+  const chars = Array.from(String(line ?? ""));
+  let usedUnits = 0;
+  let splitIndex = 0;
+
+  for (let index = 0; index < chars.length; index += 1) {
+    const char = chars[index];
+    const charUnits = char === "\t" ? 2 : /[⺀-鿿豈-﫿]/.test(char) ? 2 : 1;
+    if (splitIndex > 0 && usedUnits + charUnits > maxUnits) break;
+    usedUnits += charUnits;
+    splitIndex = index + 1;
+  }
+
+  return [chars.slice(0, splitIndex).join(""), chars.slice(splitIndex).join("")];
+}
+
+function getTableMetrics(columnCount) {
+  if (columnCount >= 7) {
+    return { fontSize: 11, horizontalPadding: 8, lineHeight: 15, verticalPadding: 10, minHeight: 25 };
+  }
+  if (columnCount >= 5) {
+    return { fontSize: 12, horizontalPadding: 14, lineHeight: 17, verticalPadding: 12, minHeight: 30 };
+  }
+  return { fontSize: 13.6, horizontalPadding: 24, lineHeight: 20, verticalPadding: 16, minHeight: 38 };
+}
+
+function estimateTableRowHeight(cells, columnCount, contentWidth = DEFAULT_CONTENT_WIDTH) {
+  const metrics = getTableMetrics(columnCount);
+  const cellWidth = Math.max(24, contentWidth / Math.max(1, columnCount));
+  const visualUnitsPerLine = Math.max(
+    2,
+    (cellWidth - metrics.horizontalPadding) / metrics.fontSize,
+  );
+  const lines = Math.max(
+    1,
+    ...(cells || []).map((cell) => Math.ceil(getVisualLength(cell) / visualUnitsPerLine)),
+  );
+  return Math.max(metrics.minHeight, lines * metrics.lineHeight + metrics.verticalPadding);
+}
+
+export function estimateTitleHeight(title, layout = DEFAULT_CONTENT_WIDTH) {
   if (!title || !title.trim()) return 0;
-  const visualLength = Array.from(title.trim()).reduce(
-    (length, char) => length + (/[⺀-鿿豈-﫿]/.test(char) ? 1.0 : 0.55),
-    0,
-  );
-  // Card title font size ~1.4rem (~22-24px bold) fits ~15 CJK visual units per line
-  const lines = Math.max(1, Math.ceil(visualLength / 15));
-  // Title lines (32px each) plus red divider bar & bottom margin ~28px
-  return lines * 32 + 28;
+  const metrics = resolveLayoutMetrics(layout);
+  const visualLength = getVisualLength(title.trim());
+  const unitsPerLine = Math.max(14, metrics.contentWidth / metrics.titleUnitWidth);
+  const lines = Math.max(1, Math.ceil(visualLength / unitsPerLine));
+  return lines * 32 + 24;
 }
 
-export function estimateBlockHeight(block) {
+export function estimateBlockHeight(block, layout = DEFAULT_CONTENT_WIDTH) {
+  const metrics = resolveLayoutMetrics(layout);
+  const contentWidth = metrics.contentWidth;
+
   switch (block.type) {
-    case "heading2": return 46;
-    case "heading3": return 36;
-    case "paragraph": return estimateTextLines(block.content) * 24 + 8;
+    case "heading2": return metrics.heading2Height;
+    case "heading3": return metrics.heading3Height;
+    case "paragraph": return estimateTextLines(block.content, metrics) * metrics.paragraphLineHeight + metrics.paragraphExtra;
     case "blockquote":
-      return (block.lines || []).reduce((h, l) => h + estimateTextLines(l) * 24, 0) + 20;
+      return (block.lines || []).reduce((h, line) => h + estimateTextLines(line, metrics) * metrics.paragraphLineHeight, 0) + 20;
     case "list": {
       const itemsH = (block.items || []).reduce(
-        (acc, item) => acc + estimateTextLines(typeof item === "string" ? item : (item?.text || "")) * 22 + 6,
+        (height, item) => height + estimateTextLines(typeof item === "string" ? item : (item?.text || ""), metrics) * metrics.listLineHeight + metrics.listItemGap,
         0,
       );
       return Math.max(28, itemsH + 10);
     }
     case "ordered-list": {
       const itemsH = (block.items || []).reduce(
-        (acc, item) => acc + estimateTextLines(typeof item === "string" ? item : (item?.text || "")) * 22 + 6,
+        (height, item) => height + estimateTextLines(typeof item === "string" ? item : (item?.text || ""), metrics) * metrics.listLineHeight + metrics.listItemGap,
         0,
       );
       return Math.max(28, itemsH + 10);
     }
     case "task-list": {
       const itemsH = (block.items || []).reduce(
-        (acc, item) => acc + estimateTextLines(item?.text || "") * 22 + 6,
+        (height, item) => height + estimateTextLines(item?.text || "", metrics) * metrics.listLineHeight + metrics.listItemGap,
         0,
       );
       return Math.max(28, itemsH + 10);
     }
-    case "code-block": return Math.min((block.lines?.length || 1) * 20 + 32, 220);
+    case "code-block": {
+      const lines = block.lines?.length ? block.lines : [""];
+      const visualLines = lines.reduce(
+        (total, line) => total + estimateCodeLineCount(line, contentWidth),
+        0,
+      );
+      return visualLines * CODE_LINE_HEIGHT + CODE_BLOCK_VERTICAL_SPACE;
+    }
     // Mermaid is fitted into a 180px-high static viewport plus wrapper space.
-    case "mermaid": return 218;
-    case "table": return ((block.rows?.length || 0) + 1) * 38 + 16;
+    case "mermaid": return metrics.mermaidHeight;
+    case "table": {
+      const columnCount = Math.max(
+        1,
+        block.headers?.length || 0,
+        ...(block.rows || []).map((row) => row?.length || 0),
+      );
+      const headerHeight = estimateTableRowHeight(block.headers || [], columnCount, contentWidth);
+      const rowsHeight = (block.rows || []).reduce(
+        (height, row) => height + estimateTableRowHeight(row, columnCount, contentWidth),
+        0,
+      );
+      return headerHeight + rowsHeight + 18;
+    }
     // Includes the image wrapper's vertical margins and its 200px max-height.
-    case "image": return 236;
+    case "image": return metrics.imageHeight;
     case "divider": return 24;
-    case "callout": return estimateTextLines((block.title || "") + (block.content || "")) * 22 + 28;
+    case "callout": return estimateTextLines((block.title || "") + (block.content || ""), metrics) * metrics.listLineHeight + 28;
     default: return 28;
   }
 }
@@ -132,29 +304,62 @@ export function estimateBlockHeight(block) {
  */
 export const CARD_CONTENT_HEIGHT = 360;
 
-/**
- * Calculate usable body height for the selected platform at the same design
- * viewport used by preview/export. Header, footer, poster padding and title
- * occupy about 240px at the 450px-wide portrait reference size.
- */
-export function getCardContentHeight(platformWidth, platformHeight) {
+export function getCardLayoutMetrics(platformWidth, platformHeight) {
   const width = Number(platformWidth) || 1080;
   const height = Number(platformHeight) || 1440;
-  const designWidth = width > height ? 640 : 450;
-  const designHeight = Math.round(designWidth * (height / width));
-  const referenceDesignHeight = 600;
+  const aspectRatio = width / height;
+  const kind = aspectRatio > 1
+    ? "landscape"
+    : aspectRatio >= 0.9
+      ? "square"
+      : aspectRatio >= 0.68
+        ? "portrait"
+        : "tall";
+  const profile = LAYOUT_PROFILES[kind];
+  const designHeight = Math.round(profile.designWidth * (height / width));
+  const contentWidth = Math.max(220, profile.designWidth - 88);
 
-  return Math.max(160, CARD_CONTENT_HEIGHT + designHeight - referenceDesignHeight);
+  return {
+    ...profile,
+    kind,
+    designHeight,
+    contentWidth,
+    contentHeight: Math.max(profile.minContentHeight, designHeight - profile.verticalReserve),
+    textUnitsPerLine: Math.max(12, contentWidth / 14.08),
+  };
+}
+
+export function getCardLayoutClass(platformWidth, platformHeight) {
+  return getCardLayoutMetrics(platformWidth, platformHeight).className;
+}
+
+/**
+ * Calculate usable body height for the selected platform at the same design
+ * viewport used by preview/export. Each aspect-ratio profile reserves the
+ * exact poster chrome and card padding used by both render paths.
+ */
+export function getCardContentHeight(platformWidth, platformHeight) {
+  return getCardLayoutMetrics(platformWidth, platformHeight).contentHeight;
+}
+
+export function getCardContentWidth(platformWidth, platformHeight) {
+  return getCardLayoutMetrics(platformWidth, platformHeight).contentWidth;
 }
 
 /**
  * Split block array into pages such that each page's estimated height ≤ maxHeight.
  * Supports partial list splitting to eliminate large blank spaces, and binds intro prompts to lists.
  */
-function splitParagraphContent(text, availableHeight) {
-  if (!text || text.length < 120) return { part1: text, part2: "" };
-  const maxLines = Math.max(1, Math.floor((availableHeight - 8) / 24));
-  const maxVisualUnits = maxLines * 26;
+function splitParagraphContent(text, availableHeight, layout) {
+  const metrics = resolveLayoutMetrics(layout);
+  const maxLines = Math.floor(
+    (availableHeight - metrics.paragraphExtra) / metrics.paragraphLineHeight,
+  );
+  const totalLines = estimateTextLines(text, metrics);
+  if (!text || maxLines < 2 || totalLines <= maxLines) {
+    return { part1: text, part2: "" };
+  }
+  const maxVisualUnits = maxLines * metrics.textUnitsPerLine;
 
   const chars = Array.from(text);
   let units = 0;
@@ -173,13 +378,23 @@ function splitParagraphContent(text, availableHeight) {
     return { part1: text, part2: "" };
   }
 
-  const puncRegex = /[。！？\n.!?]/;
-  let bestSplit = splitIndex;
-  for (let k = splitIndex; k >= Math.max(0, splitIndex - 30); k--) {
+  const puncRegex = /[。！？；，、.!?;,\s]/;
+  let bestSplit = 0;
+  const earliestSplit = Math.max(0, splitIndex - Math.ceil(metrics.textUnitsPerLine));
+  for (let k = splitIndex - 1; k >= earliestSplit; k--) {
     if (puncRegex.test(chars[k] || "")) {
-      bestSplit = k + 1;
+      const candidate = k + 1;
+      if (!hasBalancedInlineMarkup(chars.slice(0, candidate).join(""))) continue;
+      if (!hasBalancedInlineMarkup(chars.slice(candidate).join(""))) continue;
+      bestSplit = candidate;
       break;
     }
+  }
+
+  if (!bestSplit) {
+    const hasInlineSyntax = /[`*_[\]()~=$<>]/.test(text);
+    if (hasInlineSyntax) return { part1: text, part2: "" };
+    bestSplit = splitIndex;
   }
 
   const part1 = chars.slice(0, bestSplit).join("").trim();
@@ -195,27 +410,162 @@ function splitParagraphContent(text, availableHeight) {
  * Split block array into pages such that each page's estimated height ≤ maxHeight.
  * Preserves 100% strict sequential order of all blocks in the document.
  */
-export function splitBlocksIntoPages(blocks, firstPageMaxHeight = CARD_CONTENT_HEIGHT, overflowMaxHeight = CARD_CONTENT_HEIGHT) {
+function splitCodeBlockForHeight(block, availableHeight, contentWidth) {
+  const sourceLines = block.lines?.length ? block.lines : [""];
+  let usedHeight = CODE_BLOCK_VERTICAL_SPACE;
+  let splitIndex = 0;
+
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const lineHeight = estimateCodeLineCount(sourceLines[index], contentWidth) * CODE_LINE_HEIGHT;
+    if (splitIndex > 0 && usedHeight + lineHeight > availableHeight) break;
+    if (splitIndex === 0 && usedHeight + lineHeight > availableHeight) {
+      const availableLines = Math.floor(
+        (availableHeight - CODE_BLOCK_VERTICAL_SPACE) / CODE_LINE_HEIGHT,
+      );
+      if (availableLines < 1) return null;
+
+      const [headLine, tailLine] = splitCodeLineAtVisualUnits(
+        sourceLines[index],
+        availableLines * getCodeColumnCapacity(contentWidth),
+      );
+      if (!headLine || !tailLine) return null;
+
+      return {
+        head: { ...block, lines: [headLine], raw: headLine },
+        tail: {
+          ...block,
+          lines: [tailLine, ...sourceLines.slice(index + 1)],
+          raw: [tailLine, ...sourceLines.slice(index + 1)].join("\n"),
+        },
+      };
+    }
+    usedHeight += lineHeight;
+    splitIndex = index + 1;
+  }
+
+  if (splitIndex <= 0) return null;
+  if (splitIndex >= sourceLines.length) return { head: block, tail: null };
+
+  const headLines = sourceLines.slice(0, splitIndex);
+  const tailLines = sourceLines.slice(splitIndex);
+  return {
+    head: { ...block, lines: headLines, raw: headLines.join("\n") },
+    tail: { ...block, lines: tailLines, raw: tailLines.join("\n") },
+  };
+}
+
+function splitTableForHeight(block, availableHeight, contentWidth) {
+  const rows = block.rows || [];
+  if (!rows.length) return null;
+
+  const columnCount = Math.max(
+    1,
+    block.headers?.length || 0,
+    ...rows.map((row) => row?.length || 0),
+  );
+  let usedHeight = estimateTableRowHeight(block.headers || [], columnCount, contentWidth) + 18;
+  let splitIndex = 0;
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const rowHeight = estimateTableRowHeight(rows[index], columnCount, contentWidth);
+    if (splitIndex > 0 && usedHeight + rowHeight > availableHeight) break;
+    if (splitIndex === 0 && usedHeight + rowHeight > availableHeight) return null;
+    usedHeight += rowHeight;
+    splitIndex = index + 1;
+  }
+
+  if (splitIndex <= 0) return null;
+  if (splitIndex >= rows.length) return { head: block, tail: null };
+
+  return {
+    head: { ...block, rows: rows.slice(0, splitIndex) },
+    tail: { ...block, rows: rows.slice(splitIndex) },
+  };
+}
+
+function splitStaticBlockForHeight(block, availableHeight, contentWidth) {
+  if (block.type === "code-block") {
+    return splitCodeBlockForHeight(block, availableHeight, contentWidth);
+  }
+  if (block.type === "table") {
+    return splitTableForHeight(block, availableHeight, contentWidth);
+  }
+  return null;
+}
+
+export function splitBlocksIntoPages(
+  blocks,
+  firstPageMaxHeight = CARD_CONTENT_HEIGHT,
+  overflowMaxHeight = CARD_CONTENT_HEIGHT,
+  layout = DEFAULT_CONTENT_WIDTH,
+) {
   if (!blocks || !blocks.length) return [[]];
+  const metrics = resolveLayoutMetrics(layout);
+  const contentWidth = metrics.contentWidth;
   const pages = [];
+  const queue = [...blocks];
   let current = [];
   let currentHeight = 0;
 
-  for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
-    const block = blocks[bIdx];
+  while (queue.length) {
+    const block = queue.shift();
     const isFirstPage = pages.length === 0;
     const maxHeight = isFirstPage ? firstPageMaxHeight : overflowMaxHeight;
-    const bh = estimateBlockHeight(block);
+    const bh = estimateBlockHeight(block, metrics);
+    const blockGap = current.length ? metrics.bodyGap : 0;
 
     // If block fits on current page
-    if (current.length === 0 || currentHeight + bh <= maxHeight) {
+    if (currentHeight + blockGap + bh <= maxHeight) {
       current.push(block);
-      currentHeight += bh;
+      currentHeight += blockGap + bh;
       continue;
     }
 
     // Block does not fit on current page.
-    const remainingSpace = maxHeight - currentHeight;
+    const remainingSpace = maxHeight - currentHeight - blockGap;
+
+    // A title can leave less room on the first page than subsequent pages.
+    // Preserve a title-only first page when the whole first block fits normally
+    // on an overflow page instead of clipping or needlessly fragmenting it.
+    if (
+      isFirstPage &&
+      current.length === 0 &&
+      firstPageMaxHeight < overflowMaxHeight &&
+      bh <= overflowMaxHeight
+    ) {
+      pages.push([]);
+      queue.unshift(block);
+      continue;
+    }
+
+    // Static cards cannot scroll. Use the current page's remaining space first,
+    // then repeat the language badge or table header on continuation pages.
+    if (block.type === "code-block" || block.type === "table") {
+      const split = splitStaticBlockForHeight(block, remainingSpace, contentWidth);
+      if (split?.head) {
+        current.push(split.head);
+        currentHeight += blockGap + estimateBlockHeight(split.head, metrics);
+        if (split.tail) {
+          pages.push(current);
+          current = [];
+          currentHeight = 0;
+          queue.unshift(split.tail);
+        }
+        continue;
+      }
+    }
+
+    if (block.type === "paragraph") {
+      const { part1, part2 } = splitParagraphContent(block.content, remainingSpace, metrics);
+      if (part1 && part2) {
+        current.push({ ...block, content: part1 });
+        pages.push(current);
+        current = [];
+        currentHeight = 0;
+        queue.unshift({ ...block, content: part2 });
+        continue;
+      }
+    }
 
     // Strategy 1: Try splitting multi-item list if current page has remaining space for at least 1 item
     if (
@@ -225,19 +575,21 @@ export function splitBlocksIntoPages(blocks, firstPageMaxHeight = CARD_CONTENT_H
       remainingSpace >= 28
     ) {
       const subList1Items = [];
-      const subList2Items = [];
-      let itemsH = 0;
+      let itemsH = 10;
 
-      for (const item of block.items) {
+      for (let itemIndex = 0; itemIndex < block.items.length; itemIndex += 1) {
+        const item = block.items[itemIndex];
         const itemText = typeof item === "string" ? item : (item?.text || "");
-        const itemHeight = estimateTextLines(itemText) * 22 + 6;
+        const itemHeight = estimateTextLines(itemText, metrics) * metrics.listLineHeight + metrics.listItemGap;
         if (itemsH + itemHeight <= remainingSpace) {
           subList1Items.push(item);
           itemsH += itemHeight;
         } else {
-          subList2Items.push(item);
+          break;
         }
       }
+
+      const subList2Items = block.items.slice(subList1Items.length);
 
       if (subList1Items.length > 0 && subList2Items.length > 0) {
         const startIdx = block.startIndex || 0;
@@ -251,9 +603,7 @@ export function splitBlocksIntoPages(blocks, firstPageMaxHeight = CARD_CONTENT_H
           items: subList2Items,
           startIndex: startIdx + subList1Items.length,
         };
-        const remainingH = estimateBlockHeight(remainingBlock);
-        current.push(remainingBlock);
-        currentHeight = remainingH;
+        queue.unshift(remainingBlock);
         continue;
       }
     }
@@ -270,15 +620,25 @@ export function splitBlocksIntoPages(blocks, firstPageMaxHeight = CARD_CONTENT_H
         current.pop();
         pages.push(current);
 
-        current = [lastBlock, block];
-        currentHeight = estimateBlockHeight(lastBlock) + bh;
+        current = [lastBlock];
+        currentHeight = estimateBlockHeight(lastBlock, metrics);
+        queue.unshift(block);
         continue;
       }
     }
 
     // Default: Close current page and start next page with this block
-    pages.push(current);
-    current = [block];
+    if (current.length) {
+      pages.push(current);
+      current = [];
+      currentHeight = 0;
+      queue.unshift(block);
+      continue;
+    }
+
+    // A single unbreakable row or source line can still exceed a card. Keep it
+    // visible and let CSS wrap it instead of entering a pagination loop.
+    current.push(block);
     currentHeight = bh;
   }
 
@@ -559,11 +919,20 @@ export function renderBlockToHtml(block) {
     }
 
     case "table": {
+      const columnCount = Math.max(
+        block.headers?.length || 0,
+        ...(block.rows || []).map((row) => row?.length || 0),
+      );
+      const densityClass = columnCount >= 7
+        ? " card-table--compact"
+        : columnCount >= 5
+          ? " card-table--dense"
+          : "";
       const headers = (block.headers || []).map((h) => `<th>${formatInline(h)}</th>`).join("");
       const bodyRows = (block.rows || [])
         .map((row) => `<tr>${(row || []).map((c) => `<td>${formatInline(c)}</td>`).join("")}</tr>`)
         .join("");
-      return `<div class="card-table-wrap"><table class="card-table"><thead><tr>${headers}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
+      return `<div class="card-table-wrap"><table class="card-table${densityClass}"><thead><tr>${headers}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
     }
 
     case "blockquote": {
