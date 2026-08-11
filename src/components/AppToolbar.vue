@@ -157,12 +157,6 @@ onBeforeUnmount(() => {
           </div>
         </button>
 
-        <!-- Settings Button -->
-        <AppIconButton :aria-label="t('toolbar.settings')" :title="t('toolbar.settings')"
-          @click="$emit('open-settings')">
-          <AppIcon name="settings" :size="16" />
-        </AppIconButton>
-
         <!-- Primary Export Button (Matching Screenshot) -->
         <button type="button"
           class="inline-flex h-8.5 items-center rounded-lg !bg-blue-600 hover:!bg-blue-700 px-3 text-xs font-bold !text-white shadow-xs active:scale-98 transition group cursor-pointer"

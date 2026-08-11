@@ -3,6 +3,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import AppCloseConfirmDialog from "./components/AppCloseConfirmDialog.vue";
+import AppUpdateDialog from "./components/AppUpdateDialog.vue";
 import AppIcon from "./components/AppIcon.vue";
 import AppStatusbar from "./components/AppStatusbar.vue";
 import AppSettingsDialog from "./components/AppSettingsDialog.vue";
@@ -13,6 +14,7 @@ import PreviewPanel from "./components/PreviewPanel.vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
 import { useCardExport } from "./composables/useCardExport";
 import { useStudioDocument } from "./composables/useStudioDocument";
+import { useUpdater } from "./composables/useUpdater";
 import { useAppPreferences } from "./i18n/index.js";
 
 const exportFormats = ["PNG", "JPG", "PDF", "长图(PNG)"];
@@ -228,10 +230,16 @@ watch([leftSidebarDocked, rightSidebarDocked], ([leftDocked, rightDocked]) => {
   }
 });
 
+const { checkForUpdates } = useUpdater();
+
 onMounted(async () => {
   handleResize();
   window.addEventListener("resize", handleResize);
   window.addEventListener("keydown", handleGlobalKeydown);
+
+  setTimeout(() => {
+    checkForUpdates(true);
+  }, 2000);
 
   if (!isTauri()) {
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -270,7 +278,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="flex h-screen min-h-0 min-w-0 flex-col overflow-hidden border border-slate-200 dark:border-slate-800 bg-[radial-gradient(circle_at_52%_34%,rgba(255,244,223,0.72),transparent_24rem),linear-gradient(180deg,#fbfcff_0%,#f2f5fb_100%)] dark:bg-[radial-gradient(circle_at_52%_34%,rgba(30,27,75,0.45),transparent_24rem),linear-gradient(180deg,#090d16_0%,#0f172a_100%)] text-slate-900 dark:text-slate-100 transition-colors duration-200">
-    <AppTitlebar />
+    <AppTitlebar @open-settings="settingsDialogOpen = true" />
     <AppToolbar
       :selected-theme="selectedTheme"
       :is-dark-mode="isDarkMode"
@@ -413,6 +421,7 @@ onBeforeUnmount(() => {
       @confirm="confirmApplicationClose"
     />
     <AppSettingsDialog :open="settingsDialogOpen" @close="settingsDialogOpen = false" />
+    <AppUpdateDialog />
     <AppStatusbar :canvas-size-label="canvasSizeLabel" :pages-length="pages.length" :auto-save-status="autoSaveStatus" />
   </div>
 </template>

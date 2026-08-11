@@ -10,6 +10,7 @@ const messages = {
 
 const LANGUAGE_PREFERENCE_KEY = "markcard_studio_language_preference_v1";
 const APPEARANCE_PREFERENCE_KEY = "markcard_studio_appearance_preference_v1";
+const AUTO_UPDATE_PREFERENCE_KEY = "markcard_studio_auto_update_preference_v1";
 const supportedLocales = ["zh-CN", "en-US"];
 
 function getSystemLocale() {
@@ -40,12 +41,14 @@ function writePreference(key, value) {
 
 const storedLanguagePreference = readPreference(LANGUAGE_PREFERENCE_KEY, "system");
 const storedAppearancePreference = readPreference(APPEARANCE_PREFERENCE_KEY, "system");
+const storedAutoUpdatePreference = readPreference(AUTO_UPDATE_PREFERENCE_KEY, "true");
 const languagePreference = ref(
   [...supportedLocales, "system"].includes(storedLanguagePreference) ? storedLanguagePreference : "system",
 );
 const appearancePreference = ref(
   ["system", "light", "dark"].includes(storedAppearancePreference) ? storedAppearancePreference : "system",
 );
+const autoUpdatePreference = ref(storedAutoUpdatePreference !== "false");
 
 export const i18n = createI18n({
   legacy: false,
@@ -89,13 +92,20 @@ export function useAppPreferences() {
     applyAppearance();
   }
 
+  function setAutoUpdatePreference(enabled) {
+    autoUpdatePreference.value = Boolean(enabled);
+    writePreference(AUTO_UPDATE_PREFERENCE_KEY, autoUpdatePreference.value ? "true" : "false");
+  }
+
   return {
     languagePreference: readonly(languagePreference),
     appearancePreference: readonly(appearancePreference),
+    autoUpdatePreference: readonly(autoUpdatePreference),
     resolvedLocale,
     resolvedAppearance,
     setLanguagePreference,
     setAppearancePreference,
+    setAutoUpdatePreference,
   };
 }
 

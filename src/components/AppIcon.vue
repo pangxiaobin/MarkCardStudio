@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import {
   AlignLeft,
+  ArrowUpCircle,
   Calendar,
   Check,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   CircleHelp,
   Download,
+  DownloadCloud,
   ExternalLink,
   FilePlus2,
   FileText,
@@ -36,6 +38,7 @@ import {
   Power,
   Quote,
   Redo2,
+  RefreshCw,
   Save,
   Settings2,
   SlidersHorizontal,
@@ -68,6 +71,7 @@ const props = defineProps({
 
 const iconMap = {
   "align-left": AlignLeft,
+  "arrow-up-circle": ArrowUpCircle,
   calendar: Calendar,
   check: Check,
   "check-circle": CheckCircle2,
@@ -77,6 +81,7 @@ const iconMap = {
   "chevron-up": ChevronUp,
   "circle-help": CircleHelp,
   download: Download,
+  "download-cloud": DownloadCloud,
   "external-link": ExternalLink,
   "file-plus-2": FilePlus2,
   "file-text": FileText,
@@ -102,6 +107,7 @@ const iconMap = {
   power: Power,
   quote: Quote,
   redo: Redo2,
+  "refresh-cw": RefreshCw,
   save: Save,
   settings: Settings2,
   sliders: SlidersHorizontal,

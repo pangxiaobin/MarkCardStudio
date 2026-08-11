@@ -18,6 +18,8 @@
     "@codemirror/view": "^6.43.7",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "highlight.js": "^11.11.1",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
