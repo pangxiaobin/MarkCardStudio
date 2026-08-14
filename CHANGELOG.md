@@ -8,6 +8,7 @@
 - **自定义字体管理**：支持导入、管理与删除本地自定义字体文件（TTF/OTF/WOFF/WOFF2），并自动应用到实时卡片预览与导出渲染中。
 - **多比例响应式版式与表格适配优化**：优化横屏、正方形及窄屏卡片的表格列宽限制、内外边距与排版规则，提升多尺寸下卡片适配度与出图美感。
 - **架构重构与导出渲染一致性**：重构导出 DOM 与测量 DOM，统一基于 `CardArtwork.vue` 渲染，彻底保证预览、测量与无损导出的视觉一致性。
+- **自动更新完整性与自动重启支持**：修复内建软件更新下载/安装阶段因 Vue 响应式代理（Proxy）引发的 `TypeError: Cannot read private member` 错误，并集成 `tauri-plugin-process` 与自动重启机制，提供平滑的版本在线升级与自动重启体验。
 
 ---
 
@@ -15,6 +16,7 @@
 - **Custom Font Management**: Added support for importing, managing, and deleting local fonts (TTF/OTF/WOFF/WOFF2), automatically hydrated into live card previews and exports.
 - **Responsive Layout & Table Fitting**: Enhanced column width auto-calculation and safety padding for landscape, square, and narrow cards.
 - **Export DOM Architecture Refactor**: Unified export and measurement session renderers with `CardArtwork.vue` for absolute rendering fidelity across preview, measurement, and final export.
+- **Auto-Updater Integration & Seamless Relaunch**: Fixed `TypeError: Cannot read private member` during update downloading caused by Vue Proxy encapsulation, and integrated `tauri-plugin-process` for seamless in-app version upgrades and automatic relaunch.
 
 ## [v0.1.1] - 2026-08-11
 

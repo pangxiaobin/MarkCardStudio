@@ -128,7 +128,12 @@ export function useUpdater() {
         }
       });
 
-      await relaunch();
+      try {
+        await relaunch();
+      } catch (relaunchErr) {
+        console.warn("[UpdateInstall] Automatic relaunch skipped or failed:", relaunchErr);
+        showToast("更新完成！请手动重启应用以体验最新版本", "success", 6000);
+      }
     } catch (err) {
       console.error("[UpdateInstall] Download or install failed:", err);
       errorMsg.value = err?.message || String(err);

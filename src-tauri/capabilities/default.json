@@ -8,6 +8,7 @@
       "dialog:allow-open",
       "dialog:allow-save",
       "opener:default",
+      "process:allow-restart",
       "updater:default"
     ]
   }
