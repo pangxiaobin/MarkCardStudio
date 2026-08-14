@@ -46,7 +46,10 @@ import {
   Split,
   Square,
   SunMedium,
+  Trash2,
+  Type,
   Undo2,
+  Upload,
   X,
 } from "@lucide/vue";
 
@@ -115,7 +118,10 @@ const iconMap = {
   split: Split,
   square: Square,
   sun: SunMedium,
+  "trash-2": Trash2,
+  type: Type,
   undo: Undo2,
+  upload: Upload,
   x: X,
 };
 

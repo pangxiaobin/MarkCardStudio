@@ -20,6 +20,7 @@ const tabMeta = {
   平台: { key: "platform", icon: "monitor" },
   分页: { key: "pagination", icon: "layers" },
   背景: { key: "background", icon: "palette" },
+  字体: { key: "font", icon: "type" },
   标头: { key: "header", icon: "heading-2" },
 };
 
@@ -34,7 +35,7 @@ function getTabIcon(tab) {
 
 <template>
   <div
-    class="grid grid-cols-4 w-full border-b border-slate-200/80 dark:border-slate-800 select-none"
+    class="grid grid-cols-5 w-full border-b border-slate-200/80 dark:border-slate-800 select-none"
     role="tablist"
   >
     <div

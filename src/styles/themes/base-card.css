@@ -13,6 +13,20 @@
   transition: width 200ms ease, height 200ms ease, aspect-ratio 200ms ease;
 }
 
+.poster-canvas-frame.has-custom-font .poster-header,
+.poster-canvas-frame.has-custom-font .poster-header *,
+.poster-canvas-frame.has-custom-font .poster-footer,
+.poster-canvas-frame.has-custom-font .poster-footer *,
+.poster-canvas-frame.has-custom-font .card-canvas,
+.poster-canvas-frame.has-custom-font .card-canvas :where(h1, h2, h3, p, blockquote, ul, ol, li, table, thead, tbody, tr, th, td, .card-callout),
+.poster-canvas-frame.has-custom-font .mermaid-raw-box :where(text, tspan, p, span, div, label) {
+  font-family: var(--markcard-custom-font) !important;
+}
+
+.poster-canvas-frame.has-custom-font {
+  font-synthesis: weight style;
+}
+
 .card-scroll-area {
   position: relative;
   z-index: 1;
@@ -353,6 +367,16 @@
   max-width: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Ensure Mermaid node text inside default light boxes is always dark and high contrast */
+.mermaid-raw-box .node span.nodeLabel,
+.mermaid-raw-box .node label,
+.mermaid-raw-box .node div,
+.mermaid-raw-box svg text.nodeLabel,
+.mermaid-raw-box svg .node text {
+  color: #1e293b !important;
+  fill: #1e293b !important;
 }
 
 .mermaid-diagram,

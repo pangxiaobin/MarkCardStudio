@@ -80,6 +80,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  customFontFamily: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits([
@@ -162,6 +166,7 @@ onBeforeUnmount(() => {
       :show-top-right="showTopRight"
       :show-bottom-left="showBottomLeft"
       :show-bottom-right="showBottomRight"
+      :custom-font-family="customFontFamily"
       @select-page="$emit('select-page', $event)"
       @set-view-mode="viewMode = $event"
     >

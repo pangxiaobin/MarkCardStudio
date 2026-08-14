@@ -82,6 +82,10 @@ pub fn run() {
             files::get_default_export_folder,
             files::save_export_file,
             files::open_export_folder,
+            files::import_custom_font,
+            files::list_custom_fonts,
+            files::read_custom_font,
+            files::delete_custom_font,
             exit_application
         ])
         .build(tauri::generate_context!())

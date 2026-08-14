@@ -18,7 +18,7 @@ import { useUpdater } from "./composables/useUpdater";
 import { useAppPreferences } from "./i18n/index.js";
 
 const exportFormats = ["PNG", "JPG", "PDF", "长图(PNG)"];
-const settingTabs = ["平台", "分页", "背景", "标头"];
+const settingTabs = ["平台", "分页", "背景", "字体", "标头"];
 
 const {
   markdownSource,
@@ -48,6 +48,13 @@ const {
   activeTab,
   customWidth,
   customHeight,
+  customFonts,
+  selectedFontId,
+  customFontFamily,
+  customFontEmbedCss,
+  isLoadingCustomFonts,
+  customFontError,
+  isCustomFontRuntimeAvailable,
   lineCount,
   wordCount,
   platforms,
@@ -88,6 +95,9 @@ const {
   setCustomHeight,
   setCustomDimensions,
   swapDimensions,
+  importCustomFont,
+  selectCustomFont,
+  deleteCustomFont,
 } = useStudioDocument();
 
 const previewPanelRef = ref(null);
@@ -133,6 +143,8 @@ const { exportCurrentPage } = useCardExport({
   showTopRight,
   showBottomLeft,
   showBottomRight,
+  customFontFamily,
+  customFontEmbedCss,
 });
 
 const { resolvedAppearance, setAppearancePreference } = useAppPreferences();
@@ -311,6 +323,7 @@ onBeforeUnmount(() => {
         :show-top-right="showTopRight"
         :show-bottom-left="showBottomLeft"
         :show-bottom-right="showBottomRight"
+        :custom-font-family="customFontFamily"
         @add-page="addPageTemplate" @delete-page="deletePage" @move-page="movePage" @next-page="nextPage"
         @previous-page="previousPage" @select-page="selectPage" @set-zoom="setZoom" />
 
@@ -329,6 +342,11 @@ onBeforeUnmount(() => {
         :show-top-right="showTopRight"
         :show-bottom-left="showBottomLeft"
         :show-bottom-right="showBottomRight"
+        :custom-fonts="customFonts"
+        :selected-font-id="selectedFontId"
+        :custom-font-runtime-available="isCustomFontRuntimeAvailable"
+        :custom-font-loading="isLoadingCustomFonts"
+        :custom-font-message="customFontError"
         @export="exportCurrentPage"
         @select-format="selectedFormat = $event" @select-platform="selectPlatform" @set-active-tab="activeTab = $event"
         @set-scale="scale = $event" @toggle-solid-background="solidBackground = !solidBackground"
@@ -339,6 +357,7 @@ onBeforeUnmount(() => {
         @set-pagination-mode="setPaginationMode" @set-custom-delimiter="setCustomDelimiter"
         @set-max-page-length="setMaxPageLength"
         @set-background-type="setBackgroundType" @set-background-value="setBackgroundValue"
+        @import-font="importCustomFont" @select-font="selectCustomFont" @delete-font="deleteCustomFont"
         @update-global-meta="updateGlobalMeta"
         @update:show-page-number="showPageNumber = $event"
         @update:show-top-left="showTopLeft = $event"
@@ -393,6 +412,11 @@ onBeforeUnmount(() => {
           :show-top-right="showTopRight"
           :show-bottom-left="showBottomLeft"
           :show-bottom-right="showBottomRight"
+          :custom-fonts="customFonts"
+          :selected-font-id="selectedFontId"
+          :custom-font-runtime-available="isCustomFontRuntimeAvailable"
+          :custom-font-loading="isLoadingCustomFonts"
+          :custom-font-message="customFontError"
           @export="exportCurrentPage"
           @select-format="selectedFormat = $event" @select-platform="selectPlatform"
           @set-active-tab="activeTab = $event" @set-scale="scale = $event"
@@ -404,6 +428,7 @@ onBeforeUnmount(() => {
           @set-pagination-mode="setPaginationMode" @set-custom-delimiter="setCustomDelimiter"
           @set-max-page-length="setMaxPageLength"
           @set-background-type="setBackgroundType" @set-background-value="setBackgroundValue"
+          @import-font="importCustomFont" @select-font="selectCustomFont" @delete-font="deleteCustomFont"
           @update-global-meta="updateGlobalMeta"
           @update:show-page-number="showPageNumber = $event"
           @update:show-top-left="showTopLeft = $event"

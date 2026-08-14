@@ -25,6 +25,7 @@ const props = defineProps({
   showTopRight: { type: Boolean, default: true },
   showBottomLeft: { type: Boolean, default: true },
   showBottomRight: { type: Boolean, default: true },
+  customFontFamily: { type: String, default: "" },
 });
 
 const emit = defineEmits(["fullscreen", "copy"]);
@@ -116,23 +117,26 @@ onBeforeUnmount(() => {
     :style="previewFrameStyle"
   >
     <div class="group/card absolute left-0 top-0" :style="artworkStyle">
-      <CardArtwork
-        ref="artworkRef"
-        :page="activePage"
-        :page-index="activePageIndex"
-        :pages-length="pagesLength"
-        :selected-platform="selectedPlatform"
-        :selected-theme-class="selectedThemeClass"
-        :transparent-background="transparentBackground"
-        :background-color="backgroundColor"
-        :background-type="backgroundType"
-        :background-value="backgroundValue"
-        :show-page-number="showPageNumber"
-        :show-top-left="showTopLeft"
-        :show-top-right="showTopRight"
-        :show-bottom-left="showBottomLeft"
-        :show-bottom-right="showBottomRight"
-      />
+      <div class="overflow-hidden rounded-2xl shadow-xl">
+        <CardArtwork
+          ref="artworkRef"
+          :page="activePage"
+          :page-index="activePageIndex"
+          :pages-length="pagesLength"
+          :selected-platform="selectedPlatform"
+          :selected-theme-class="selectedThemeClass"
+          :transparent-background="transparentBackground"
+          :background-color="backgroundColor"
+          :background-type="backgroundType"
+          :background-value="backgroundValue"
+          :show-page-number="showPageNumber"
+          :show-top-left="showTopLeft"
+          :show-top-right="showTopRight"
+          :show-bottom-left="showBottomLeft"
+          :show-bottom-right="showBottomRight"
+          :custom-font-family="customFontFamily"
+        />
+      </div>
 
       <div class="absolute right-3.5 top-3.5 z-20 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 pointer-events-auto">
         <button

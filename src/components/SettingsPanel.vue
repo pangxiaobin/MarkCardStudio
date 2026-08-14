@@ -6,6 +6,7 @@ import SettingsHeaderFooter from "./settings/SettingsHeaderFooter.vue";
 import SettingsPagination from "./settings/SettingsPagination.vue";
 import SettingsPlatforms from "./settings/SettingsPlatforms.vue";
 import SettingsTabs from "./settings/SettingsTabs.vue";
+import SettingsTypography from "./settings/SettingsTypography.vue";
 
 defineProps({
   activePage: {
@@ -96,6 +97,26 @@ defineProps({
     type: String,
     default: "#69eacb",
   },
+  customFonts: {
+    type: Array,
+    default: () => [],
+  },
+  selectedFontId: {
+    type: String,
+    default: "theme-default",
+  },
+  customFontRuntimeAvailable: {
+    type: Boolean,
+    default: false,
+  },
+  customFontLoading: {
+    type: Boolean,
+    default: false,
+  },
+  customFontMessage: {
+    type: String,
+    default: "",
+  },
   showPageNumber: {
     type: Boolean,
     default: true,
@@ -141,6 +162,9 @@ defineEmits([
   "set-max-page-length",
   "set-background-type",
   "set-background-value",
+  "import-font",
+  "select-font",
+  "delete-font",
   "update-global-meta",
   "update:showPageNumber",
   "update:showTopLeft",
@@ -205,6 +229,19 @@ defineEmits([
             @set-background-type="$emit('set-background-type', $event)"
             @set-background-value="$emit('set-background-value', $event)"
             @toggle-transparent-background="$emit('toggle-transparent-background')"
+          />
+        </div>
+
+        <div v-else-if="activeTab === '字体'">
+          <SettingsTypography
+            :custom-fonts="customFonts"
+            :selected-font-id="selectedFontId"
+            :runtime-available="customFontRuntimeAvailable"
+            :loading="customFontLoading"
+            :message="customFontMessage"
+            @import-font="$emit('import-font')"
+            @select-font="$emit('select-font', $event)"
+            @delete-font="$emit('delete-font', $event)"
           />
         </div>
 

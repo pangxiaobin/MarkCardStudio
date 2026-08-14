@@ -162,6 +162,7 @@ function createMeasurementHost(options) {
         showTopRight: options.showTopRight,
         showBottomLeft: options.showBottomLeft,
         showBottomRight: options.showBottomRight,
+        customFontFamily: options.customFontFamily,
         autoPrepare: false,
       });
     },
@@ -178,6 +179,7 @@ function createMeasurementHost(options) {
     showTopRight: options.showTopRight,
     showBottomLeft: options.showBottomLeft,
     showBottomRight: options.showBottomRight,
+    customFontFingerprint: options.customFontFingerprint || "theme-default",
     dark: document.documentElement.classList.contains("dark"),
   });
 

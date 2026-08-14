@@ -33,6 +33,8 @@ export function useCardExport({
   showTopRight,
   showBottomLeft,
   showBottomRight,
+  customFontFamily,
+  customFontEmbedCss,
 }) {
   async function exportDocument() {
     await nextTick();
@@ -145,7 +147,9 @@ export function useCardExport({
         isBottomLeft,
         isBottomRight,
         pageNum,
-        pageList.length
+        pageList.length,
+        customFontFamily?.value || "",
+        customFontEmbedCss?.value || "",
       );
 
       if (!canvas) {
@@ -192,7 +196,9 @@ export function useCardExport({
         isBottomLeft,
         isBottomRight,
         i + 1,
-        pageList.length
+        pageList.length,
+        customFontFamily?.value || "",
+        customFontEmbedCss?.value || "",
       );
       if (!canvas) {
         throw new Error(t("runtime.renderFailed", { page: i + 1 }));
@@ -265,7 +271,9 @@ export function useCardExport({
         isBottomLeft,
         isBottomRight,
         i + 1,
-        pageList.length
+        pageList.length,
+        customFontFamily?.value || "",
+        customFontEmbedCss?.value || "",
       );
 
       if (!canvas) {
@@ -348,7 +356,7 @@ function sanitizeFolderName(name) {
 }
 
 // Offscreen DOM card renderer for high-res snapshot capture using html-to-image
-async function renderPageToCanvas(page, width, height, themeClass, isTransparent, bgHex, bgType, bgVal, ext, isTopLeft = true, isTopRight = true, isBottomLeft = true, isBottomRight = true, pageNum = 1, totalPages = 1) {
+async function renderPageToCanvas(page, width, height, themeClass, isTransparent, bgHex, bgType, bgVal, ext, isTopLeft = true, isTopRight = true, isBottomLeft = true, isBottomRight = true, pageNum = 1, totalPages = 1, customFontFamily = "", customFontEmbedCss = "") {
   // Render at a standard design viewport (450px wide portrait / 640px landscape)
   // then upscale via pixelRatio so the final canvas exactly matches the target platform size.
   // This avoids the "text looks tiny" problem (DOM rendered at 1080px with 16px fonts)
@@ -386,6 +394,7 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     showTopRight: isTopRight,
     showBottomLeft: isBottomLeft,
     showBottomRight: isBottomRight,
+    customFontFamily,
     autoPrepare: false,
   });
   exportApp.use(i18n);
@@ -402,8 +411,15 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     if (document.fonts?.ready) {
       await document.fonts.ready;
     }
-    const fontEmbedCSS = await rasterizeMathForExport(posterNode);
-    inlineMermaidForExport(posterNode);
+    const discoveredFontCss = await rasterizeMathForExport(posterNode);
+    const fontEmbedCSS = [discoveredFontCss, customFontEmbedCss]
+      .filter(Boolean)
+      .join("\n");
+    await rasterizeMermaidForExport(
+      posterNode,
+      customFontFamily,
+      customFontEmbedCss,
+    );
     // Inline images before cloning the node. html-to-image needs to fetch image
     // sources again while cloning; that second fetch is unreliable in the
     // Tauri WebView (especially for remote URLs) and can result in a blank
@@ -446,6 +462,7 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
 
     const canvas = await toCanvas(posterNode, captureOptions);
     compositeContentImages(canvas, posterNode);
+    compositeCoverStickers(canvas, posterNode);
     exportApp.unmount();
     container.remove();
     return canvas;
@@ -510,8 +527,8 @@ async function rasterizeMathForExport(root) {
   return fontEmbedCSS;
 }
 
-/** Convert rendered Mermaid SVGs into self-contained image nodes. */
-function inlineMermaidForExport(root) {
+/** Rasterize Mermaid while it still has access to the live DOM font and color context. */
+async function rasterizeMermaidForExport(root, customFontFamily, customFontEmbedCss) {
   const svgNodes = Array.from(root.querySelectorAll(".mermaid-raw-box svg"));
   for (const svgNode of svgNodes) {
     const rect = svgNode.getBoundingClientRect();
@@ -519,22 +536,95 @@ function inlineMermaidForExport(root) {
 
     const width = Math.ceil(rect.width);
     const height = Math.ceil(rect.height);
-    const clone = svgNode.cloneNode(true);
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    clone.setAttribute("width", String(width));
-    clone.setAttribute("height", String(height));
-
-    const serialized = new XMLSerializer().serializeToString(clone);
-    const image = document.createElement("img");
-    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
-    image.alt = t("content.mermaid");
-    image.className = "mermaid-export-image";
-    image.width = width;
-    image.height = height;
-    image.style.width = `${width}px`;
-    image.style.height = `${height}px`;
-    svgNode.replaceWith(image);
+    await inlineMermaidSvgFallback(
+      svgNode,
+      width,
+      height,
+      customFontFamily,
+      customFontEmbedCss,
+    );
   }
+}
+
+function replaceMermaidWithImage(svgNode, source, width, height) {
+  const image = document.createElement("img");
+  image.src = source;
+  image.alt = t("content.mermaid");
+  image.className = "mermaid-export-image";
+  image.width = width;
+  image.height = height;
+  image.style.width = `${width}px`;
+  image.style.height = `${height}px`;
+  svgNode.replaceWith(image);
+}
+
+async function inlineMermaidSvgFallback(
+  svgNode,
+  width,
+  height,
+  customFontFamily = "",
+  customFontEmbedCss = "",
+) {
+  const clone = svgNode.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(width));
+  clone.setAttribute("height", String(height));
+
+  if (customFontEmbedCss) {
+    const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.textContent = customFontEmbedCss;
+    clone.insertBefore(styleEl, clone.firstChild);
+  }
+
+  const sourceTextNodes = Array.from(svgNode.querySelectorAll("text, tspan, p, span, div, label"));
+  const clonedTextNodes = Array.from(clone.querySelectorAll("text, tspan, p, span, div, label"));
+  clonedTextNodes.forEach((node, index) => {
+    const sourceNode = sourceTextNodes[index];
+    if (!sourceNode) return;
+    const computed = getComputedStyle(sourceNode);
+    const family = customFontFamily
+      ? `"${customFontFamily}", sans-serif`
+      : computed.fontFamily || "sans-serif";
+    node.style.setProperty("font-family", family, "important");
+    node.style.fontSize = computed.fontSize;
+    node.style.fontWeight = computed.fontWeight || "600";
+
+    let fill = computed.fill;
+    if (!fill || fill === "none" || fill === "rgba(0, 0, 0, 0)") {
+      fill = computed.color && computed.color !== "rgba(0, 0, 0, 0)" ? computed.color : "#1e293b";
+    }
+    node.style.fill = fill;
+    node.style.color = fill;
+    node.setAttribute("fill", fill);
+  });
+
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
+
+  // Convert SVG Data URL to PNG Data URL so img.decode() in WebKit succeeds 100% without throwing exceptions
+  const img = new Image();
+  const pngDataUrl = await new Promise((resolve) => {
+    img.onload = async () => {
+      try {
+        await img.decode().catch(() => undefined);
+        await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, width * 2);
+        canvas.height = Math.max(1, height * 2);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/png"));
+          return;
+        }
+      } catch (_) {}
+      resolve(svgDataUrl);
+    };
+    img.onerror = () => resolve(svgDataUrl);
+    img.src = svgDataUrl;
+  });
+
+  replaceMermaidWithImage(svgNode, pngDataUrl, width, height);
 }
 
 function convertImageElementToDataUrl(img) {
@@ -673,6 +763,87 @@ function compositeContentImages(canvas, root) {
   }
 }
 
+function compositeCoverStickers(canvas, root) {
+  const context = canvas.getContext("2d");
+  const rootRect = root.getBoundingClientRect();
+  if (!context || rootRect.width <= 0 || rootRect.height <= 0) return;
+
+  const scaleX = canvas.width / rootRect.width;
+  const scaleY = canvas.height / rootRect.height;
+  for (const sticker of root.querySelectorAll("img.cover-sticker")) {
+    if (!sticker.complete || sticker.naturalWidth <= 0) continue;
+
+    const rect = sticker.getBoundingClientRect();
+    const boxWidth = sticker.offsetWidth;
+    const boxHeight = sticker.offsetHeight;
+    if (rect.width <= 0 || rect.height <= 0 || boxWidth <= 0 || boxHeight <= 0) continue;
+
+    const computed = getComputedStyle(sticker);
+    const borderLeft = Number.parseFloat(computed.borderLeftWidth) || 0;
+    const borderRight = Number.parseFloat(computed.borderRightWidth) || 0;
+    const borderTop = Number.parseFloat(computed.borderTopWidth) || 0;
+    const borderBottom = Number.parseFloat(computed.borderBottomWidth) || 0;
+    const paddingLeft = Number.parseFloat(computed.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(computed.paddingRight) || 0;
+    const paddingTop = Number.parseFloat(computed.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(computed.paddingBottom) || 0;
+    const contentWidth = Math.max(
+      1,
+      boxWidth - borderLeft - borderRight - paddingLeft - paddingRight,
+    );
+    const contentHeight = Math.max(
+      1,
+      boxHeight - borderTop - borderBottom - paddingTop - paddingBottom,
+    );
+    const sourceRatio = sticker.naturalWidth / sticker.naturalHeight;
+    const contentRatio = contentWidth / contentHeight;
+    const drawWidth = sourceRatio > contentRatio
+      ? contentWidth
+      : contentHeight * sourceRatio;
+    const drawHeight = sourceRatio > contentRatio
+      ? contentWidth / sourceRatio
+      : contentHeight;
+    const drawX = -boxWidth / 2
+      + borderLeft
+      + paddingLeft
+      + (contentWidth - drawWidth) / 2;
+    const drawY = -boxHeight / 2
+      + borderTop
+      + paddingTop
+      + (contentHeight - drawHeight) / 2;
+
+    let transform = null;
+    try {
+      if (computed.transform && computed.transform !== "none") {
+        transform = new DOMMatrixReadOnly(computed.transform);
+      }
+    } catch {
+      transform = null;
+    }
+
+    context.save();
+    context.scale(scaleX, scaleY);
+    context.translate(
+      rect.left - rootRect.left + rect.width / 2,
+      rect.top - rootRect.top + rect.height / 2,
+    );
+    if (transform) {
+      context.rotate(Math.atan2(transform.b, transform.a));
+      context.scale(
+        Math.hypot(transform.a, transform.b) || 1,
+        Math.hypot(transform.c, transform.d) || 1,
+      );
+    }
+    const opacity = Number.parseFloat(computed.opacity);
+    context.globalAlpha = Number.isFinite(opacity) ? opacity : 1;
+    if (computed.filter && computed.filter !== "none") {
+      context.filter = computed.filter;
+    }
+    context.drawImage(sticker, drawX, drawY, drawWidth, drawHeight);
+    context.restore();
+  }
+}
+
 function roundedRectPath(context, x, y, width, height, radius) {
   context.beginPath();
   context.moveTo(x + radius, y);
@@ -746,22 +917,18 @@ async function rasterizeCoverStickersForExport(root) {
     try {
       await waitForImageDecode(sticker);
 
-      let dataUrl = convertImageElementToDataUrl(sticker);
-      if (!dataUrl) {
-        const canvas = document.createElement("canvas");
-        canvas.width = 192;
-        canvas.height = 192;
-        const context = canvas.getContext("2d");
-        if (context) {
-          context.drawImage(sticker, 0, 0, canvas.width, canvas.height);
-          dataUrl = canvas.toDataURL("image/png");
+      const canvas = document.createElement("canvas");
+      canvas.width = 384;
+      canvas.height = 384;
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.drawImage(sticker, 0, 0, 384, 384);
+        const dataUrl = canvas.toDataURL("image/png");
+        if (dataUrl) {
+          sticker.srcset = "";
+          sticker.src = dataUrl;
+          await waitForImageDecode(sticker);
         }
-      }
-
-      if (dataUrl) {
-        sticker.srcset = "";
-        sticker.src = dataUrl;
-        await waitForImageDecode(sticker);
       }
     } catch (error) {
       // Keep the already-inlined SVG as a fallback for image export.

@@ -74,6 +74,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  customFontFamily: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["next-page", "previous-page", "select-page", "set-view-mode"]);
@@ -128,6 +132,7 @@ defineExpose({
         :show-top-right="showTopRight"
         :show-bottom-left="showBottomLeft"
         :show-bottom-right="showBottomRight"
+        :custom-font-family="customFontFamily"
         @fullscreen="isFullscreen = true"
       />
       <slot name="nav-right" />
@@ -165,6 +170,7 @@ defineExpose({
               :show-top-right="showTopRight"
               :show-bottom-left="showBottomLeft"
               :show-bottom-right="showBottomRight"
+              :custom-font-family="customFontFamily"
             />
           </div>
         </div>
@@ -207,6 +213,7 @@ defineExpose({
             :show-top-right="showTopRight"
             :show-bottom-left="showBottomLeft"
             :show-bottom-right="showBottomRight"
+            :custom-font-family="customFontFamily"
             class="shadow-2xl"
           />
         </div>

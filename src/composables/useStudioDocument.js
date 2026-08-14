@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { parseBlocks, blocksToPreviewText } from "./useContentParser.js";
+import { useCustomFonts } from "./useCustomFonts.js";
 import { createMeasuredPaginationSession } from "./useMeasuredPagination.js";
 import { DEFAULT_THEME, THEME_LIST, getThemeByName } from "../config/themes.js";
 import { i18n } from "../i18n/index.js";
@@ -197,6 +198,20 @@ export function useStudioDocument() {
   const activeTab = ref("平台");
   const customWidth = ref(1200);
   const customHeight = ref(1600);
+  const selectedFontId = ref("theme-default");
+  const customFontFamily = ref("");
+  const customFontEmbedCss = ref("");
+  const customFontFingerprint = ref("theme-default");
+  const {
+    customFonts,
+    isLoadingCustomFonts,
+    customFontError,
+    isCustomFontRuntimeAvailable,
+    refreshCustomFonts,
+    importCustomFont: importManagedCustomFont,
+    ensureCustomFontLoaded,
+    deleteCustomFont: deleteManagedCustomFont,
+  } = useCustomFonts();
 
   const globalMeta = ref({
     kicker: "@MarkCard",
@@ -213,6 +228,56 @@ export function useStudioDocument() {
     backgroundValue.value = val;
     if (backgroundType.value === "solid" && val.startsWith("#")) {
       backgroundColor.value = val;
+    }
+  }
+
+  function applyLoadedCustomFont(loaded) {
+    customFontFamily.value = loaded?.family || "";
+    customFontEmbedCss.value = loaded?.embedCss || "";
+    customFontFingerprint.value = loaded?.fingerprint || "theme-default";
+  }
+
+  async function selectCustomFont(fontId) {
+    const nextFontId = typeof fontId === "string" ? fontId : "theme-default";
+    if (nextFontId === "theme-default") {
+      applyLoadedCustomFont(null);
+      selectedFontId.value = "theme-default";
+      return;
+    }
+
+    isLoadingCustomFonts.value = true;
+    try {
+      const loaded = await ensureCustomFontLoaded(nextFontId);
+      if (!loaded) return;
+      applyLoadedCustomFont(loaded);
+      selectedFontId.value = nextFontId;
+      customFontError.value = "";
+    } catch (error) {
+      customFontError.value = error?.message || String(error);
+    } finally {
+      isLoadingCustomFonts.value = false;
+    }
+  }
+
+  async function importCustomFont() {
+    try {
+      const font = await importManagedCustomFont();
+      if (font) await selectCustomFont(font.id);
+    } catch {
+      // The font manager exposes the native error to the settings panel.
+    }
+  }
+
+  async function deleteCustomFont(fontId) {
+    if (!fontId || fontId === "theme-default") return;
+    try {
+      await deleteManagedCustomFont(fontId);
+      if (selectedFontId.value === fontId) {
+        applyLoadedCustomFont(null);
+        selectedFontId.value = "theme-default";
+      }
+    } catch {
+      // The font manager exposes the native error to the settings panel.
     }
   }
 
@@ -264,6 +329,7 @@ export function useStudioDocument() {
       if (PAGINATION_MODES.includes(settings.paginationMode)) paginationMode.value = settings.paginationMode;
       if (typeof settings.customDelimiter === "string") customDelimiter.value = settings.customDelimiter;
       if (Number.isFinite(settings.maxPageLength)) maxPageLength.value = Math.max(50, settings.maxPageLength);
+      if (typeof settings.selectedFontId === "string") selectedFontId.value = settings.selectedFontId;
 
       if (settings.globalMeta && typeof settings.globalMeta === "object") {
         if (typeof settings.globalMeta.kicker === "string") globalMeta.value.kicker = settings.globalMeta.kicker;
@@ -298,6 +364,7 @@ export function useStudioDocument() {
         paginationMode: paginationMode.value,
         customDelimiter: customDelimiter.value,
         maxPageLength: maxPageLength.value,
+        selectedFontId: selectedFontId.value,
         globalMeta: globalMeta.value,
       }));
     } catch {
@@ -330,11 +397,14 @@ export function useStudioDocument() {
       paginationMode,
       customDelimiter,
       maxPageLength,
+      selectedFontId,
       globalMeta,
     ],
     persistUserSettings,
     { deep: true },
   );
+
+  refreshCustomFonts();
 
   // --- History Management ---
   const undoStack = ref([]);
@@ -572,6 +642,26 @@ export function useStudioDocument() {
     let paginationSession = null;
 
     try {
+      const requestedFontId = selectedFontId.value;
+      if (requestedFontId === "theme-default") {
+        applyLoadedCustomFont(null);
+      } else {
+        try {
+          const loaded = await ensureCustomFontLoaded(requestedFontId);
+          if (version !== parseVersion) return;
+          if (loaded && requestedFontId === selectedFontId.value) {
+            applyLoadedCustomFont(loaded);
+          }
+        } catch (error) {
+          if (requestedFontId === selectedFontId.value) {
+            applyLoadedCustomFont(null);
+            selectedFontId.value = "theme-default";
+            customFontError.value = error?.message || String(error);
+          }
+          return;
+        }
+      }
+
       const parsed = parseMarkdownSections(
         markdownSource.value,
         paginationMode.value,
@@ -586,6 +676,8 @@ export function useStudioDocument() {
         showTopRight: showTopRight.value,
         showBottomLeft: showBottomLeft.value,
         showBottomRight: showBottomRight.value,
+        customFontFamily: customFontFamily.value,
+        customFontFingerprint: customFontFingerprint.value,
         signal: abortController.signal,
       });
 
@@ -707,6 +799,7 @@ export function useStudioDocument() {
     showTopRight,
     showBottomLeft,
     showBottomRight,
+    selectedFontId,
   ], () => {
     if (debounceTimer) clearTimeout(debounceTimer);
     updatePagesNow();
@@ -963,6 +1056,14 @@ ${t("document.inputHere")}`;
     activeTab,
     customWidth,
     customHeight,
+    customFonts,
+    selectedFontId,
+    customFontFamily,
+    customFontEmbedCss,
+    customFontFingerprint,
+    isLoadingCustomFonts,
+    customFontError,
+    isCustomFontRuntimeAvailable,
     lineCount,
     wordCount,
     platforms,
@@ -1004,6 +1105,9 @@ ${t("document.inputHere")}`;
     setCustomHeight,
     setCustomDimensions,
     swapDimensions,
+    importCustomFont,
+    selectCustomFont,
+    deleteCustomFont,
     openExportFolderPicker,
     updateGlobalMeta,
   };

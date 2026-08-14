@@ -1,12 +1,12 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use base64::{engine::general_purpose, Engine as _};
 use reqwest::{header::CONTENT_TYPE, redirect::Policy, Url};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 
@@ -35,13 +35,32 @@ pub struct LocalImage {
     data_url: String,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomFont {
+    id: String,
+    display_name: String,
+    family: String,
+    file_name: String,
+    format: String,
+    media_type: String,
+    size: u64,
+    created_at: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomFontData {
+    font: CustomFont,
+    data_url: String,
+}
+
+const MAX_CUSTOM_FONT_BYTES: u64 = 20 * 1024 * 1024;
+
 #[tauri::command]
 pub async fn pick_export_folder(app: AppHandle) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let folder_path = app
-            .dialog()
-            .file()
-            .blocking_pick_folder();
+        let folder_path = app.dialog().file().blocking_pick_folder();
 
         match folder_path {
             Some(folder_path) => {
@@ -69,6 +88,198 @@ pub async fn get_default_export_folder(app: AppHandle) -> Result<String, String>
         return Ok(display_path(&home_dir.join("Downloads")));
     }
     Ok(display_path(&std::env::current_dir().unwrap_or_default()))
+}
+
+#[tauri::command]
+pub async fn import_custom_font(app: AppHandle) -> Result<Option<CustomFont>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let selected_path = app
+            .dialog()
+            .file()
+            .add_filter("Font", &["woff2", "woff", "ttf", "otf"])
+            .blocking_pick_file();
+
+        let Some(selected_path) = selected_path else {
+            return Ok(None);
+        };
+        let source_path = selected_path
+            .into_path()
+            .map_err(|err| format!("Selected font path is not available: {err}"))?;
+        let source_metadata = fs::metadata(&source_path).map_err(|err| {
+            format!(
+                "Failed to inspect font file {}: {err}",
+                source_path.display()
+            )
+        })?;
+        if !source_metadata.is_file() {
+            return Err("Selected font path is not a file".to_string());
+        }
+        if source_metadata.len() == 0 || source_metadata.len() > MAX_CUSTOM_FONT_BYTES {
+            return Err("Font files must be between 1 byte and 20 MB".to_string());
+        }
+
+        let bytes = fs::read(&source_path)
+            .map_err(|err| format!("Failed to read font file {}: {err}", source_path.display()))?;
+        let font_format = detect_font_format(&bytes)
+            .ok_or_else(|| "Unsupported or invalid font file".to_string())?;
+        let fonts_dir = custom_fonts_dir(&app)?;
+        fs::create_dir_all(&fonts_dir).map_err(|err| {
+            format!(
+                "Failed to create custom font directory {}: {err}",
+                fonts_dir.display()
+            )
+        })?;
+        if let Some(existing_font) = find_duplicate_custom_font(&fonts_dir, &bytes)? {
+            return Ok(Some(existing_font));
+        }
+
+        let created_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+        let id = next_custom_font_id(&fonts_dir, created_at);
+        let stored_font_path = fonts_dir.join(format!("{id}.{}", font_format.extension));
+        let metadata_path = fonts_dir.join(format!("{id}.json"));
+        let display_name = source_path
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or("Custom Font")
+            .trim()
+            .to_string();
+        let font = CustomFont {
+            id: id.clone(),
+            display_name,
+            family: format!("MarkCardUser_{id}"),
+            file_name: file_name(&source_path),
+            format: font_format.css_format.to_string(),
+            media_type: font_format.media_type.to_string(),
+            size: bytes.len() as u64,
+            created_at,
+        };
+        let metadata_json = serde_json::to_vec_pretty(&font)
+            .map_err(|err| format!("Failed to serialize custom font metadata: {err}"))?;
+
+        fs::write(&stored_font_path, &bytes).map_err(|err| {
+            format!(
+                "Failed to store custom font {}: {err}",
+                stored_font_path.display()
+            )
+        })?;
+        if let Err(err) = fs::write(&metadata_path, metadata_json) {
+            let _ = fs::remove_file(&stored_font_path);
+            return Err(format!(
+                "Failed to store custom font metadata {}: {err}",
+                metadata_path.display()
+            ));
+        }
+
+        Ok(Some(font))
+    })
+    .await
+    .map_err(|err| format!("Task execution failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn list_custom_fonts(app: AppHandle) -> Result<Vec<CustomFont>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let fonts_dir = custom_fonts_dir(&app)?;
+        if !fonts_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut fonts = Vec::new();
+        let entries = fs::read_dir(&fonts_dir).map_err(|err| {
+            format!(
+                "Failed to read custom font directory {}: {err}",
+                fonts_dir.display()
+            )
+        })?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
+                continue;
+            }
+            let Ok(bytes) = fs::read(&path) else {
+                continue;
+            };
+            let Ok(font) = serde_json::from_slice::<CustomFont>(&bytes) else {
+                continue;
+            };
+            if validate_custom_font_id(&font.id).is_ok()
+                && stored_custom_font_path(&fonts_dir, &font).exists()
+            {
+                fonts.push(font);
+            }
+        }
+        fonts.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+        Ok(fonts)
+    })
+    .await
+    .map_err(|err| format!("Task execution failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn read_custom_font(app: AppHandle, font_id: String) -> Result<CustomFontData, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_custom_font_id(&font_id)?;
+        let fonts_dir = custom_fonts_dir(&app)?;
+        let font = read_custom_font_metadata(&fonts_dir, &font_id)?;
+        let font_path = stored_custom_font_path(&fonts_dir, &font);
+        let metadata = fs::metadata(&font_path).map_err(|err| {
+            format!(
+                "Failed to inspect custom font {}: {err}",
+                font_path.display()
+            )
+        })?;
+        if metadata.len() == 0 || metadata.len() > MAX_CUSTOM_FONT_BYTES {
+            return Err("Stored font is empty or exceeds the 20 MB limit".to_string());
+        }
+        let bytes = fs::read(&font_path)
+            .map_err(|err| format!("Failed to read custom font {}: {err}", font_path.display()))?;
+        if detect_font_format(&bytes).is_none() {
+            return Err("Stored custom font is invalid".to_string());
+        }
+        let encoded = general_purpose::STANDARD.encode(bytes);
+
+        Ok(CustomFontData {
+            data_url: format!("data:{};base64,{encoded}", font.media_type),
+            font,
+        })
+    })
+    .await
+    .map_err(|err| format!("Task execution failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn delete_custom_font(app: AppHandle, font_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_custom_font_id(&font_id)?;
+        let fonts_dir = custom_fonts_dir(&app)?;
+        let font = read_custom_font_metadata(&fonts_dir, &font_id)?;
+        let font_path = stored_custom_font_path(&fonts_dir, &font);
+        let metadata_path = fonts_dir.join(format!("{font_id}.json"));
+
+        if font_path.exists() {
+            fs::remove_file(&font_path).map_err(|err| {
+                format!(
+                    "Failed to delete custom font {}: {err}",
+                    font_path.display()
+                )
+            })?;
+        }
+        if metadata_path.exists() {
+            fs::remove_file(&metadata_path).map_err(|err| {
+                format!(
+                    "Failed to delete custom font metadata {}: {err}",
+                    metadata_path.display()
+                )
+            })?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|err| format!("Task execution failed: {err}"))?
 }
 
 #[tauri::command]
@@ -263,8 +474,9 @@ pub async fn resolve_local_image(
             let base_dir = if base.is_dir() {
                 base
             } else {
-                base.parent()
-                    .ok_or_else(|| format!("Base path has no parent directory: {}", base.display()))?
+                base.parent().ok_or_else(|| {
+                    format!("Base path has no parent directory: {}", base.display())
+                })?
             };
 
             let candidate = base_dir.join(&p);
@@ -432,6 +644,133 @@ fn image_media_type(path: &Path) -> Result<&'static str, String> {
         Some("tiff" | "tif") => Ok("image/tiff"),
         _ => Ok("image/png"),
     }
+}
+
+struct FontFormat {
+    extension: &'static str,
+    css_format: &'static str,
+    media_type: &'static str,
+}
+
+fn detect_font_format(bytes: &[u8]) -> Option<FontFormat> {
+    let signature = bytes.get(0..4)?;
+    match signature {
+        [0x77, 0x4f, 0x46, 0x32] => Some(FontFormat {
+            extension: "woff2",
+            css_format: "woff2",
+            media_type: "font/woff2",
+        }),
+        [0x77, 0x4f, 0x46, 0x46] => Some(FontFormat {
+            extension: "woff",
+            css_format: "woff",
+            media_type: "font/woff",
+        }),
+        [0x4f, 0x54, 0x54, 0x4f] => Some(FontFormat {
+            extension: "otf",
+            css_format: "opentype",
+            media_type: "font/otf",
+        }),
+        [0x00, 0x01, 0x00, 0x00] | [0x74, 0x72, 0x75, 0x65] => Some(FontFormat {
+            extension: "ttf",
+            css_format: "truetype",
+            media_type: "font/ttf",
+        }),
+        _ => None,
+    }
+}
+
+fn custom_fonts_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|path| path.join("custom-fonts"))
+        .map_err(|err| format!("Application data directory is not available: {err}"))
+}
+
+fn next_custom_font_id(fonts_dir: &Path, created_at: u64) -> String {
+    for suffix in 0..1000_u16 {
+        let id = if suffix == 0 {
+            format!("font_{created_at:x}")
+        } else {
+            format!("font_{created_at:x}_{suffix}")
+        };
+        if !fonts_dir.join(format!("{id}.json")).exists() {
+            return id;
+        }
+    }
+    format!("font_{created_at:x}_{}", std::process::id())
+}
+
+fn validate_custom_font_id(font_id: &str) -> Result<(), String> {
+    if font_id.is_empty()
+        || font_id.len() > 80
+        || !font_id.chars().all(|character| {
+            character.is_ascii_alphanumeric() || character == '_' || character == '-'
+        })
+    {
+        return Err("Invalid custom font identifier".to_string());
+    }
+    Ok(())
+}
+
+fn read_custom_font_metadata(fonts_dir: &Path, font_id: &str) -> Result<CustomFont, String> {
+    let metadata_path = fonts_dir.join(format!("{font_id}.json"));
+    let bytes = fs::read(&metadata_path).map_err(|err| {
+        format!(
+            "Failed to read custom font metadata {}: {err}",
+            metadata_path.display()
+        )
+    })?;
+    let font = serde_json::from_slice::<CustomFont>(&bytes)
+        .map_err(|err| format!("Invalid custom font metadata: {err}"))?;
+    if font.id != font_id {
+        return Err("Custom font metadata identifier does not match".to_string());
+    }
+    Ok(font)
+}
+
+fn find_duplicate_custom_font(
+    fonts_dir: &Path,
+    candidate_bytes: &[u8],
+) -> Result<Option<CustomFont>, String> {
+    let entries = fs::read_dir(fonts_dir).map_err(|err| {
+        format!(
+            "Failed to read custom font directory {}: {err}",
+            fonts_dir.display()
+        )
+    })?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(metadata_bytes) = fs::read(&path) else {
+            continue;
+        };
+        let Ok(font) = serde_json::from_slice::<CustomFont>(&metadata_bytes) else {
+            continue;
+        };
+        if font.size != candidate_bytes.len() as u64 || validate_custom_font_id(&font.id).is_err() {
+            continue;
+        }
+        let stored_path = stored_custom_font_path(fonts_dir, &font);
+        let Ok(stored_bytes) = fs::read(stored_path) else {
+            continue;
+        };
+        if stored_bytes == candidate_bytes {
+            return Ok(Some(font));
+        }
+    }
+    Ok(None)
+}
+
+fn stored_custom_font_path(fonts_dir: &Path, font: &CustomFont) -> PathBuf {
+    let extension = match font.format.as_str() {
+        "woff2" => "woff2",
+        "woff" => "woff",
+        "opentype" => "otf",
+        _ => "ttf",
+    };
+    fonts_dir.join(format!("{}.{}", font.id, extension))
 }
 
 fn is_remote_or_data_url(path: &str) -> bool {

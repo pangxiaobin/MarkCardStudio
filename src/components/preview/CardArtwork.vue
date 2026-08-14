@@ -30,6 +30,7 @@ const props = defineProps({
   showTopRight: { type: Boolean, default: true },
   showBottomLeft: { type: Boolean, default: true },
   showBottomRight: { type: Boolean, default: true },
+  customFontFamily: { type: String, default: "" },
   autoPrepare: { type: Boolean, default: true },
 });
 
@@ -58,10 +59,14 @@ const posterCanvasStyle = computed(() => {
     width: `${geometry.value.width}px`,
     height: `${geometry.value.height}px`,
   };
+  const typography = props.customFontFamily
+    ? { "--markcard-custom-font": `"${props.customFontFamily}", sans-serif` }
+    : {};
 
   if (props.transparentBackground) {
     return {
       ...dimensions,
+      ...typography,
       background: "transparent",
       backgroundColor: "transparent",
       backgroundImage: "none",
@@ -72,6 +77,7 @@ const posterCanvasStyle = computed(() => {
     const background = props.backgroundValue || props.backgroundColor || "#fff7e9";
     return {
       ...dimensions,
+      ...typography,
       background,
       backgroundColor: background,
       backgroundImage: "none",
@@ -81,6 +87,7 @@ const posterCanvasStyle = computed(() => {
   if (props.backgroundType === "gradient" || props.backgroundType === "pattern") {
     return {
       ...dimensions,
+      ...typography,
       background: props.backgroundValue,
       backgroundImage: props.backgroundValue,
     };
@@ -90,6 +97,7 @@ const posterCanvasStyle = computed(() => {
     if (/^(data:|https?:|blob:|\/)/i.test(props.backgroundValue || "")) {
       return {
         ...dimensions,
+        ...typography,
         backgroundImage: `url('${props.backgroundValue}')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -98,6 +106,7 @@ const posterCanvasStyle = computed(() => {
     }
     return {
       ...dimensions,
+      ...typography,
       background: props.backgroundValue,
       backgroundImage: props.backgroundValue,
     };
@@ -105,6 +114,7 @@ const posterCanvasStyle = computed(() => {
 
   return {
     ...dimensions,
+    ...typography,
     backgroundColor: props.backgroundColor || "#fff7e9",
   };
 });
@@ -151,7 +161,7 @@ function hasOverflow() {
 }
 
 watch(
-  () => [props.page, props.selectedThemeClass, props.selectedPlatform?.width, props.selectedPlatform?.height],
+  () => [props.page, props.selectedThemeClass, props.selectedPlatform?.width, props.selectedPlatform?.height, props.customFontFamily],
   () => {
     detectedOverflow.value = false;
     if (props.autoPrepare) prepareContent();
@@ -170,7 +180,8 @@ defineExpose({
 <template>
   <div
     ref="canvasElement"
-    class="poster-canvas-frame flex flex-col justify-between overflow-hidden rounded-2xl p-5 shadow-xl select-none"
+    class="poster-canvas-frame flex flex-col justify-between overflow-hidden p-5 select-none"
+    :class="{ 'has-custom-font': customFontFamily }"
     :style="posterCanvasStyle"
   >
     <div
