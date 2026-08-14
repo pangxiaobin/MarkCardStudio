@@ -18,6 +18,14 @@ const props = defineProps({
     type: String,
     default: "已开启",
   },
+  exportMessage: {
+    type: String,
+    default: "",
+  },
+  isExporting: {
+    type: Boolean,
+    default: false,
+  },
 });
 const { t } = useI18n();
 
@@ -27,6 +35,26 @@ const statusBadgeClass = computed(() => {
   if (status.includes("保存中") || status.includes("Saving")) return "bg-blue-500 text-white animate-pulse";
   if (status.includes("失败") || status.includes("错误") || /fail|error/i.test(status)) return "bg-rose-500 text-white";
   return "bg-emerald-500 text-white";
+});
+
+const isExportMessageActive = computed(() => {
+  if (props.isExporting) return true;
+  if (!props.exportMessage) return false;
+  const msg = props.exportMessage;
+  return (
+    msg.includes("渲染") ||
+    msg.includes("导出") ||
+    msg.includes("Export") ||
+    msg.includes("export") ||
+    msg.includes("PDF") ||
+    msg.includes("长图") ||
+    msg.includes("图片")
+  );
+});
+
+const isErrorMessage = computed(() => {
+  const msg = props.exportMessage;
+  return msg.includes("失败") || msg.includes("错误") || msg.includes("取消") || /failed|error|cancelled/i.test(msg);
 });
 
 const SPONSOR_URL = "https://lingxiangtools.top/?utm_source=markcard_studio&utm_medium=statusbar_sponsor&utm_campaign=sponsor_link&ref=markcard_studio";
@@ -51,10 +79,43 @@ async function handleSponsorClick(event) {
       <span class="text-xs sm:text-sm font-medium transition-colors">{{ t("statusbar.autosave") }}: {{ autoSaveStatus }}</span>
     </div>
 
-    <div class="absolute left-1/2 inline-flex h-10 -translate-x-1/2 items-center gap-5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-200 px-4 shadow-2xs">
-      <span>{{ t("statusbar.canvasSize") }}: {{ canvasSizeLabel }}</span>
-      <span>{{ t("statusbar.estimatedExport") }}: {{ t("common.imageCount", { count: pagesLength }) }}</span>
-      <div class="group relative flex items-center">
+    <div class="absolute left-1/2 inline-flex h-10 -translate-x-1/2 items-center gap-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-200 px-4 shadow-2xs">
+      <span class="whitespace-nowrap">{{ t("statusbar.canvasSize") }}: {{ canvasSizeLabel }}</span>
+      <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+      <template v-if="isExportMessageActive">
+        <div class="inline-flex items-center gap-1.5 min-w-0 max-w-[280px] sm:max-w-[420px]">
+          <AppIcon
+            :name="isExporting ? 'loader' : isErrorMessage ? 'info' : 'check-circle'"
+            :size="13"
+            class="shrink-0"
+            :class="
+              isExporting
+                ? 'animate-spin text-blue-600 dark:text-blue-400'
+                : isErrorMessage
+                  ? 'text-rose-500'
+                  : 'text-emerald-500'
+            "
+          />
+          <span
+            class="truncate text-xs font-mono font-medium"
+            :class="
+              isExporting
+                ? 'text-blue-600 dark:text-blue-400'
+                : isErrorMessage
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+            "
+          >
+            {{ exportMessage || t("toolbar.exporting") }}
+          </span>
+        </div>
+      </template>
+      <template v-else>
+        <span class="whitespace-nowrap">{{ t("statusbar.estimatedExport") }}: {{ t("common.imageCount", { count: pagesLength }) }}</span>
+      </template>
+
+      <div class="group relative flex items-center shrink-0">
         <button
           type="button"
           class="grid h-5 w-5 place-items-center rounded-full border border-slate-400 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"

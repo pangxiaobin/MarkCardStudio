@@ -29,6 +29,10 @@ defineProps({
     type: String,
     required: true,
   },
+  isExporting: {
+    type: Boolean,
+    default: false,
+  },
   pagesLength: {
     type: Number,
     required: true,
@@ -271,6 +275,7 @@ defineEmits([
       class="shrink-0 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
       :export-formats="exportFormats"
       :export-message="exportMessage"
+      :is-exporting="isExporting"
       :pages-length="pagesLength"
       :scale="scale"
       :selected-format="selectedFormat"

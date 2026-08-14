@@ -29,6 +29,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  isExporting: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -107,11 +111,12 @@ async function handleOpenExportFolder() {
         <button
           v-if="isCollapsed"
           type="button"
-          class="mr-1 inline-flex h-6.5 items-center gap-1 rounded-md !bg-blue-600 hover:!bg-blue-700 px-2.5 text-[11px] font-semibold !text-white shadow-2xs active:scale-95 transition whitespace-nowrap"
+          class="mr-1 inline-flex h-6.5 items-center gap-1 rounded-md !bg-blue-600 hover:!bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed px-2.5 text-[11px] font-semibold !text-white shadow-2xs active:scale-95 transition whitespace-nowrap"
+          :disabled="isExporting"
           @click.stop="$emit('export')"
         >
-          <AppIcon name="download" :size="11" />
-          {{ t("toolbar.export") }}
+          <AppIcon :name="isExporting ? 'loader' : 'download'" :size="11" :class="{ 'animate-spin': isExporting }" />
+          {{ isExporting ? t("toolbar.exporting") : t("toolbar.export") }}
         </button>
 
         <button
@@ -212,11 +217,12 @@ async function handleOpenExportFolder() {
           <div class="pt-0.5">
             <button
               type="button"
-              class="group relative inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg !bg-blue-600 hover:!bg-blue-700 !text-white text-xs font-bold shadow-[0_4px_14px_rgba(37,99,235,0.35)] active:scale-[0.99] transition-all duration-200 whitespace-nowrap"
+              class="group relative inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg !bg-blue-600 hover:!bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed !text-white text-xs font-bold shadow-[0_4px_14px_rgba(37,99,235,0.35)] active:scale-[0.99] transition-all duration-200 whitespace-nowrap"
+              :disabled="isExporting"
               @click="$emit('export')"
             >
-              <AppIcon name="download" :size="15" class="transition-transform group-hover:-translate-y-0.5 shrink-0" />
-              <span class="whitespace-nowrap">{{ mainButtonText }}</span>
+              <AppIcon :name="isExporting ? 'loader' : 'download'" :size="15" class="transition-transform group-hover:-translate-y-0.5 shrink-0" :class="{ 'animate-spin': isExporting }" />
+              <span class="whitespace-nowrap">{{ isExporting ? t("toolbar.exporting") : mainButtonText }}</span>
             </button>
           </div>
 

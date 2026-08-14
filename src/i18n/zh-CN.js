@@ -12,6 +12,7 @@ export default {
     appearance: "切换明暗主题",
     settings: "设置",
     export: "导出",
+    exporting: "导出中...",
     openDocument: "打开本地 Markdown 文档（⌘/Ctrl + O）",
     undo: "撤销（⌘Z / Ctrl+Z）",
     redo: "重做（⌘⇧Z / Ctrl+Y）",

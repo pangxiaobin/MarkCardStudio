@@ -20,6 +20,7 @@ export function useCardExport({
   sourcePath,
   selectedPlatform,
   exportMessage,
+  isExporting,
   scale,
   selectedFormat,
   transparentBackground,
@@ -40,62 +41,69 @@ export function useCardExport({
     await nextTick();
     const allPages = pages?.value || [];
     if (!allPages.length) return;
+    if (isExporting?.value) return;
 
-    const platform = selectedPlatform?.value || { width: 1080, height: 1440, name: "小红书" };
-    const currentScale = scale?.value || 2;
-    // Map scale (1/2/3) to JPEG quality (0.80/0.90/0.95)
-    const jpegQuality = currentScale === 1 ? 0.80 : currentScale === 3 ? 0.95 : 0.90;
-    const format = selectedFormat?.value || "PNG";
-    // Always export all pages
-    const scope = "all";
-    const themeClass = selectedThemeClass?.value || "theme-swiss-grid";
-    const isTransparent = transparentBackground?.value || false;
-    const bgHex = backgroundColor?.value || "#69eacb";
-    const bgType = backgroundType?.value || "gradient";
-    const bgVal = backgroundValue?.value || "linear-gradient(135deg, #69eacb 0%, #eaccf8 48%, #6654f1 100%)";
-    let targetFolder = exportPath?.value?.trim() || "";
-    const isTopLeft = showTopLeft?.value ?? true;
-    const isTopRight = showTopRight?.value ?? showPageNumber?.value ?? true;
-    const isBottomLeft = showBottomLeft?.value ?? true;
-    const isBottomRight = showBottomRight?.value ?? true;
-
-    const pagesToExport = scope === "single"
-      ? [allPages[activePageIndex.value] || allPages[0]]
-      : allPages;
-
-    if (!targetFolder && isTauriRuntime()) {
-      exportMessage.value = t("runtime.chooseExportFolder");
-      try {
-        const selectedFolder = await invoke("pick_export_folder");
-        if (!selectedFolder) {
-          exportMessage.value = t("runtime.exportCancelled");
-          return;
-        }
-        targetFolder = selectedFolder;
-        if (exportPath) exportPath.value = selectedFolder;
-      } catch (err) {
-        exportMessage.value = t("runtime.folderFailed", { error: err?.message || err });
-        return;
-      }
-    }
-
-    const outputFolderName = createOutputFolderName(sourcePath?.value);
-
-    exportMessage.value = t("runtime.preparingExport", { count: pagesToExport.length });
+    if (isExporting) isExporting.value = true;
 
     try {
-      if (format === "PDF") {
-        await exportAsPDF(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
-      } else if (format === "长图(PNG)") {
-        await exportAsLongImage(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
-      } else if (format === "JPG") {
-        await exportAsImages(pagesToExport, platform, jpegQuality, themeClass, false, bgHex, bgType, bgVal, "jpg", targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
-      } else {
-        await exportAsImages(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, "png", targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
+      const platform = selectedPlatform?.value || { width: 1080, height: 1440, name: "小红书" };
+      const currentScale = scale?.value || 2;
+      // Map scale (1/2/3) to JPEG quality (0.80/0.90/0.95)
+      const jpegQuality = currentScale === 1 ? 0.80 : currentScale === 3 ? 0.95 : 0.90;
+      const format = selectedFormat?.value || "PNG";
+      // Always export all pages
+      const scope = "all";
+      const themeClass = selectedThemeClass?.value || "theme-swiss-grid";
+      const isTransparent = transparentBackground?.value || false;
+      const bgHex = backgroundColor?.value || "#69eacb";
+      const bgType = backgroundType?.value || "gradient";
+      const bgVal = backgroundValue?.value || "linear-gradient(135deg, #69eacb 0%, #eaccf8 48%, #6654f1 100%)";
+      let targetFolder = exportPath?.value?.trim() || "";
+      const isTopLeft = showTopLeft?.value ?? true;
+      const isTopRight = showTopRight?.value ?? showPageNumber?.value ?? true;
+      const isBottomLeft = showBottomLeft?.value ?? true;
+      const isBottomRight = showBottomRight?.value ?? true;
+
+      const pagesToExport = scope === "single"
+        ? [allPages[activePageIndex.value] || allPages[0]]
+        : allPages;
+
+      if (!targetFolder && isTauriRuntime()) {
+        exportMessage.value = t("runtime.chooseExportFolder");
+        try {
+          const selectedFolder = await invoke("pick_export_folder");
+          if (!selectedFolder) {
+            exportMessage.value = t("runtime.exportCancelled");
+            return;
+          }
+          targetFolder = selectedFolder;
+          if (exportPath) exportPath.value = selectedFolder;
+        } catch (err) {
+          exportMessage.value = t("runtime.folderFailed", { error: err?.message || err });
+          return;
+        }
       }
-    } catch (err) {
-      console.error("Export error:", err);
-      exportMessage.value = t("runtime.exportFailed", { error: err.message || err });
+
+      const outputFolderName = createOutputFolderName(sourcePath?.value);
+
+      exportMessage.value = t("runtime.preparingExport", { count: pagesToExport.length });
+
+      try {
+        if (format === "PDF") {
+          await exportAsPDF(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
+        } else if (format === "长图(PNG)") {
+          await exportAsLongImage(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
+        } else if (format === "JPG") {
+          await exportAsImages(pagesToExport, platform, jpegQuality, themeClass, false, bgHex, bgType, bgVal, "jpg", targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
+        } else {
+          await exportAsImages(pagesToExport, platform, jpegQuality, themeClass, isTransparent, bgHex, bgType, bgVal, "png", targetFolder, outputFolderName, isTopLeft, isTopRight, isBottomLeft, isBottomRight);
+        }
+      } catch (err) {
+        console.error("Export error:", err);
+        exportMessage.value = t("runtime.exportFailed", { error: err.message || err });
+      }
+    } finally {
+      if (isExporting) isExporting.value = false;
     }
   }
 

@@ -12,6 +12,7 @@ export default {
     appearance: "Toggle light and dark appearance",
     settings: "Settings",
     export: "Export",
+    exporting: "Exporting...",
     openDocument: "Open a local Markdown document (Cmd/Ctrl + O)",
     undo: "Undo (Cmd/Ctrl + Z)",
     redo: "Redo (Cmd/Ctrl + Shift + Z)",

@@ -178,6 +178,7 @@ export function useStudioDocument() {
   const pages = ref([createFallbackPage()]);
   const activePageIndex = ref(0);
   const isLoadingDocument = ref(false);
+  const isExporting = ref(false);
   const exportMessage = ref("");
   const showTopLeft = ref(true);
   const showTopRight = ref(true);
@@ -1037,6 +1038,7 @@ ${t("document.inputHere")}`;
     selectedPage,
     activePageIndex,
     isLoadingDocument,
+    isExporting,
     exportMessage,
     autoSaveStatus,
     showPageNumber,

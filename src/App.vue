@@ -29,6 +29,7 @@ const {
   selectedPage,
   activePageIndex,
   isLoadingDocument,
+  isExporting,
   exportMessage,
   autoSaveStatus,
   showPageNumber,
@@ -130,6 +131,7 @@ const { exportCurrentPage } = useCardExport({
   sourcePath,
   selectedPlatform,
   exportMessage,
+  isExporting,
   scale,
   selectedFormat,
   transparentBackground,
@@ -295,6 +297,7 @@ onBeforeUnmount(() => {
       :is-dark-mode="isDarkMode"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :is-exporting="isExporting"
       @export="exportCurrentPage"
       @new-document="createNewDocument"
       @open-markdown="openDocumentFromDialog"
@@ -329,7 +332,7 @@ onBeforeUnmount(() => {
 
       <SettingsPanel v-if="rightSidebarDocked" class="min-h-0 min-w-0" :active-page-index="activePageIndex"
         :active-page="selectedPage"
-        :active-tab="activeTab" :export-formats="exportFormats" :export-message="exportMessage"
+        :active-tab="activeTab" :export-formats="exportFormats" :export-message="exportMessage" :is-exporting="isExporting"
         :pages-length="pages.length" :platforms="platforms" :scale="scale" :selected-format="selectedFormat"
         :selected-platform-name="selectedPlatformName" :selected-platform="selectedPlatform"
         :custom-width="customWidth" :custom-height="customHeight"
@@ -399,7 +402,7 @@ onBeforeUnmount(() => {
         class="fixed inset-y-0 right-0 z-50 h-screen w-[min(340px,88vw)] p-3">
         <SettingsPanel class="h-full min-h-0 min-w-0" :active-page-index="activePageIndex" :active-tab="activeTab"
           :active-page="selectedPage"
-          :export-formats="exportFormats" :export-message="exportMessage" :pages-length="pages.length"
+          :export-formats="exportFormats" :export-message="exportMessage" :is-exporting="isExporting" :pages-length="pages.length"
           :platforms="platforms" :scale="scale" :selected-format="selectedFormat"
           :selected-platform-name="selectedPlatformName" :selected-platform="selectedPlatform"
           :custom-width="customWidth" :custom-height="customHeight"
@@ -446,7 +449,13 @@ onBeforeUnmount(() => {
     />
     <AppSettingsDialog :open="settingsDialogOpen" @close="settingsDialogOpen = false" />
     <AppUpdateDialog />
-    <AppStatusbar :canvas-size-label="canvasSizeLabel" :pages-length="pages.length" :auto-save-status="autoSaveStatus" />
+    <AppStatusbar
+      :canvas-size-label="canvasSizeLabel"
+      :pages-length="pages.length"
+      :auto-save-status="autoSaveStatus"
+      :export-message="exportMessage"
+      :is-exporting="isExporting"
+    />
   </div>
 </template>
 

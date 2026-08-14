@@ -22,6 +22,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isExporting: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -159,10 +163,11 @@ onBeforeUnmount(() => {
 
         <!-- Primary Export Button (Matching Screenshot) -->
         <button type="button"
-          class="inline-flex h-8.5 items-center rounded-lg !bg-blue-600 hover:!bg-blue-700 px-3 text-xs font-bold !text-white shadow-xs active:scale-98 transition group cursor-pointer"
+          class="inline-flex h-8.5 items-center rounded-lg !bg-blue-600 hover:!bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed px-3 text-xs font-bold !text-white shadow-xs active:scale-98 transition group cursor-pointer"
+          :disabled="isExporting"
           @click="$emit('export')">
-          <AppIcon name="download" :size="15" class="mr-1.5" />
-          <span>{{ t("toolbar.export") }}</span>
+          <AppIcon :name="isExporting ? 'loader' : 'download'" :size="15" class="mr-1.5" :class="{ 'animate-spin': isExporting }" />
+          <span>{{ isExporting ? t("toolbar.exporting") : t("toolbar.export") }}</span>
         </button>
       </div>
     </div>
