@@ -1,5 +1,21 @@
 # Changelog / 变更日志
 
+## [v0.1.2] - 2026-08-14
+
+### 版本功能与体验优化 / Features & UX Enhancements
+
+- **全局常驻导出进度与 Loading 状态**：导出时底部常驻状态栏实时显示导出与渲染进度，且工具栏与侧边栏导出按钮同步防重与 Loading 响应，即便侧边栏折叠收起仍可清晰感知进度。
+- **自定义字体管理**：支持导入、管理与删除本地自定义字体文件（TTF/OTF/WOFF/WOFF2），并自动应用到实时卡片预览与导出渲染中。
+- **多比例响应式版式与表格适配优化**：优化横屏、正方形及窄屏卡片的表格列宽限制、内外边距与排版规则，提升多尺寸下卡片适配度与出图美感。
+- **架构重构与导出渲染一致性**：重构导出 DOM 与测量 DOM，统一基于 `CardArtwork.vue` 渲染，彻底保证预览、测量与无损导出的视觉一致性。
+
+---
+
+- **Global Export Progress & Loading Feedback**: Added live progress indicator to bottom statusbar and loading state to toolbar/settings buttons, maintaining progress visibility even when the right panel is collapsed.
+- **Custom Font Management**: Added support for importing, managing, and deleting local fonts (TTF/OTF/WOFF/WOFF2), automatically hydrated into live card previews and exports.
+- **Responsive Layout & Table Fitting**: Enhanced column width auto-calculation and safety padding for landscape, square, and narrow cards.
+- **Export DOM Architecture Refactor**: Unified export and measurement session renderers with `CardArtwork.vue` for absolute rendering fidelity across preview, measurement, and final export.
+
 ## [v0.1.1] - 2026-08-11
 
 ### 版本功能与体验优化 / Features & UX Enhancements
