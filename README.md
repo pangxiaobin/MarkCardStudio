@@ -82,18 +82,10 @@ The files in [`imgs/EN`](imgs/EN) are real card exports produced by MarkCard Stu
 ### Install
 
 ```bash
-git clone <your-fork-or-repository-url>
+git clone https://github.com/pangxiaobin/MarkCardStudio.git
 cd MarkCardStudio
 pnpm install
 ```
-
-### Run in a browser
-
-```bash
-pnpm dev
-```
-
-The browser build is useful for interface work. Native file dialogs and direct filesystem output require the Tauri app; browser mode uses the available web fallbacks.
 
 ### Run the desktop app
 
@@ -104,9 +96,6 @@ pnpm tauri dev
 ### Build
 
 ```bash
-# Build the web assets
-pnpm build
-
 # Build native application bundles
 pnpm tauri build
 ```

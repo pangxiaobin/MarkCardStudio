@@ -87,18 +87,10 @@ MarkCard Studio 是一款面向内容创作者和知识分享者的本地优先�
 ### 安装
 
 ```bash
-git clone <你的仓库或派生仓库地址>
+git clone https://github.com/pangxiaobin/MarkCardStudio.git
 cd MarkCardStudio
 pnpm install
 ```
-
-### 在浏览器中运行
-
-```bash
-pnpm dev
-```
-
-浏览器模式适合开发界面。原生文件对话框和直接写入文件系统需要 Tauri 桌面端；浏览器模式会使用可用的 Web 降级方案。
 
 ### 运行桌面应用
 
@@ -109,9 +101,6 @@ pnpm tauri dev
 ### 构建
 
 ```bash
-# 构建前端资源
-pnpm build
-
 # 构建原生应用安装包
 pnpm tauri build
 ```
