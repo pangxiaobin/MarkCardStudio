@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { markRaw, ref, shallowRef, toRaw } from "vue";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
@@ -9,7 +9,7 @@ const MANUAL_CHECK_TIMEOUT = 10000; // 10 seconds timeout for manual check
 
 const isChecking = ref(false);
 const updateAvailable = ref(false);
-const updateInfo = ref(null);
+const updateInfo = shallowRef(null);
 const isDownloading = ref(false);
 const downloadProgress = ref(0);
 const errorMsg = ref("");
@@ -71,7 +71,7 @@ export function useUpdater() {
 
       if (update && update.available) {
         updateAvailable.value = true;
-        updateInfo.value = update;
+        updateInfo.value = markRaw(update);
         return update;
       }
 
@@ -100,7 +100,8 @@ export function useUpdater() {
   }
 
   async function startDownloadAndInstall() {
-    if (!updateInfo.value) return;
+    const rawUpdate = toRaw(updateInfo.value);
+    if (!rawUpdate) return;
 
     isDownloading.value = true;
     downloadProgress.value = 0;
@@ -110,7 +111,7 @@ export function useUpdater() {
       let downloadedBytes = 0;
       let totalBytes = 0;
 
-      await updateInfo.value.downloadAndInstall((event) => {
+      await rawUpdate.downloadAndInstall((event) => {
         switch (event.event) {
           case "Started":
             totalBytes = event.data.contentLength || 0;
