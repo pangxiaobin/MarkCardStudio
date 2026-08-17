@@ -234,8 +234,7 @@ jobs:
         with:
           tagName: ${{ needs.prepare-release.outputs.tag }}
           releaseId: ${{ needs.prepare-release.outputs.release_id }}
-          includeUpdaterJson: true
-          updaterJsonKeepName: true
+          includeUpdaterJson: false
           args: ${{ matrix.args }}
 
   publish-release:
@@ -245,15 +244,151 @@ jobs:
       - build
     runs-on: ubuntu-latest
     steps:
-      - name: Publish release
+      - name: Generate updater manifest and publish release
         uses: actions/github-script@v8
         env:
           RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
         with:
           script: |
+            const { owner, repo } = context.repo;
+            const release_id = Number(process.env.RELEASE_ID);
+            const tag = process.env.RELEASE_TAG;
+            const version = tag.replace(/^v/, '');
+
+            // 1. Fetch all assets uploaded by the build matrix
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              owner,
+              repo,
+              release_id,
+              per_page: 100,
+            });
+
+            console.log(`Found ${assets.length} assets in release ${tag} (id: ${release_id})`);
+
+            // 2. Match signatures with binary artifacts
+            const platforms = {};
+            const sigAssets = assets.filter((a) => a.name.endsWith('.sig'));
+
+            for (const sigAsset of sigAssets) {
+              const targetName = sigAsset.name.slice(0, -4);
+              const targetAsset = assets.find((a) => a.name === targetName);
+              if (!targetAsset) {
+                console.warn(`Could not find matching target asset for signature: ${sigAsset.name}`);
+                continue;
+              }
+
+              const response = await github.rest.repos.getReleaseAsset({
+                owner,
+                repo,
+                asset_id: sigAsset.id,
+                headers: {
+                  accept: 'application/octet-stream',
+                },
+              });
+
+              const signature = Buffer.from(response.data).toString('utf-8').trim();
+              if (!signature) {
+                throw new Error(`Signature file ${sigAsset.name} is empty!`);
+              }
+
+              const url = targetAsset.browser_download_url;
+              const entry = { signature, url };
+
+              console.log(`Matched signature for ${targetName}`);
+
+              if (/aarch64.*\.app\.tar\.gz$/i.test(targetName) || /darwin.*aarch64/i.test(targetName)) {
+                platforms['darwin-aarch64'] = entry;
+                platforms['darwin-aarch64-app'] = entry;
+              } else if (/(x64|x86_64).*\.app\.tar\.gz$/i.test(targetName) || /darwin.*(x64|x86_64)/i.test(targetName)) {
+                platforms['darwin-x86_64'] = entry;
+                platforms['darwin-x86_64-app'] = entry;
+              } else if (/(\.nsis\.zip|-setup\.exe|-setup\.nsis\.zip)$/i.test(targetName)) {
+                platforms['windows-x86_64'] = entry;
+                platforms['windows-x86_64-nsis'] = entry;
+              } else if (/(\.msi|\.msi\.zip)$/i.test(targetName)) {
+                platforms['windows-x86_64-msi'] = entry;
+                if (!platforms['windows-x86_64']) {
+                  platforms['windows-x86_64'] = entry;
+                }
+              } else if (/\.AppImage(\.tar\.gz)?$/i.test(targetName)) {
+                platforms['linux-x86_64'] = entry;
+                platforms['linux-x86_64-appimage'] = entry;
+              } else if (/\.deb$/i.test(targetName)) {
+                platforms['linux-x86_64-deb'] = entry;
+              } else if (/\.rpm$/i.test(targetName)) {
+                platforms['linux-x86_64-rpm'] = entry;
+              }
+            }
+
+            // 3. Strict validation: Ensure all core platforms are present
+            const requiredPlatforms = [
+              'darwin-aarch64',
+              'darwin-x86_64',
+              'windows-x86_64',
+              'linux-x86_64',
+            ];
+
+            const missingPlatforms = requiredPlatforms.filter(
+              (p) => !platforms[p] || !platforms[p].signature || !platforms[p].url
+            );
+
+            if (missingPlatforms.length > 0) {
+              const available = Object.keys(platforms).join(', ') || 'none';
+              const assetNames = assets.map((a) => a.name).join(', ');
+              throw new Error(
+                `Release validation failed: Missing required updater platforms: [${missingPlatforms.join(', ')}]. ` +
+                `Available platforms: [${available}]. Total assets in release: [${assetNames}]. ` +
+                `Aborting publish to prevent broken updater rollout.`
+              );
+            }
+
+            console.log('All required platforms validated successfully:', requiredPlatforms.join(', '));
+
+            // 4. Assemble unified latest.json manifest
+            const latestJson = {
+              version,
+              notes: "",
+              pub_date: new Date().toISOString(),
+              platforms,
+            };
+
+            const latestJsonBuffer = Buffer.from(JSON.stringify(latestJson, null, 2), 'utf-8');
+
+            // 5. Clean up any existing latest.json asset safely
+            const existingLatest = assets.find((a) => a.name === 'latest.json');
+            if (existingLatest) {
+              try {
+                await github.rest.repos.deleteReleaseAsset({
+                  owner,
+                  repo,
+                  asset_id: existingLatest.id,
+                });
+                console.log('Removed existing latest.json');
+              } catch (delErr) {
+                console.warn('Could not delete existing latest.json (ignored):', delErr.message);
+              }
+            }
+
+            // 6. Upload unified latest.json asset
+            await github.rest.repos.uploadReleaseAsset({
+              owner,
+              repo,
+              release_id,
+              name: 'latest.json',
+              data: latestJsonBuffer,
+              headers: {
+                'content-type': 'application/json',
+                'content-length': latestJsonBuffer.length,
+              },
+            });
+            console.log('Successfully uploaded unified latest.json');
+
+            // 7. Mark the draft release as published
             await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: Number(process.env.RELEASE_ID),
+              owner,
+              repo,
+              release_id,
               draft: false,
             });
+            console.log(`Release ${tag} published successfully!`);
