@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps({
@@ -32,6 +32,23 @@ const emit = defineEmits([
 ]);
 const { t } = useI18n();
 
+const localWidth = ref(props.customWidth);
+const localHeight = ref(props.customHeight);
+
+watch(
+  () => props.customWidth,
+  (val) => {
+    localWidth.value = val;
+  }
+);
+
+watch(
+  () => props.customHeight,
+  (val) => {
+    localHeight.value = val;
+  }
+);
+
 function platformLabel(platform) {
   return t(`publish.platforms.${platform.name}.name`);
 }
@@ -41,17 +58,39 @@ const isCustomSelected = computed(
 );
 
 function handleWidthInput(event) {
+  localWidth.value = event.target.value;
   const val = parseInt(event.target.value, 10);
-  if (!isNaN(val)) {
+  if (!isNaN(val) && val >= 300 && val <= 3840) {
     emit("set-custom-width", val);
   }
 }
 
 function handleHeightInput(event) {
+  localHeight.value = event.target.value;
   const val = parseInt(event.target.value, 10);
-  if (!isNaN(val)) {
+  if (!isNaN(val) && val >= 300 && val <= 3840) {
     emit("set-custom-height", val);
   }
+}
+
+function commitWidth() {
+  let val = parseInt(localWidth.value, 10);
+  if (isNaN(val)) {
+    val = props.customWidth || 1200;
+  }
+  val = Math.min(3840, Math.max(300, val));
+  localWidth.value = val;
+  emit("set-custom-width", val);
+}
+
+function commitHeight() {
+  let val = parseInt(localHeight.value, 10);
+  if (isNaN(val)) {
+    val = props.customHeight || 1600;
+  }
+  val = Math.min(3840, Math.max(300, val));
+  localHeight.value = val;
+  emit("set-custom-height", val);
 }
 </script>
 
@@ -116,8 +155,10 @@ function handleHeightInput(event) {
             max="3840"
             step="10"
             class="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 text-xs font-mono text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-blue-500 transition"
-            :value="customWidth"
+            :value="localWidth"
             @input="handleWidthInput"
+            @blur="commitWidth"
+            @keydown.enter="commitWidth"
           />
         </div>
         <div>
@@ -128,8 +169,10 @@ function handleHeightInput(event) {
             max="3840"
             step="10"
             class="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 text-xs font-mono text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-blue-500 transition"
-            :value="customHeight"
+            :value="localHeight"
             @input="handleHeightInput"
+            @blur="commitHeight"
+            @keydown.enter="commitHeight"
           />
         </div>
       </div>

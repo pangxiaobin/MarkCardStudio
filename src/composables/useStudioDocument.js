@@ -803,7 +803,9 @@ export function useStudioDocument() {
     selectedFontId,
   ], () => {
     if (debounceTimer) clearTimeout(debounceTimer);
-    updatePagesNow();
+    debounceTimer = setTimeout(() => {
+      updatePagesNow();
+    }, 120);
   });
 
   watch(
@@ -988,9 +990,6 @@ ${t("document.inputHere")}`;
     const val = parseInt(w, 10);
     if (!isNaN(val) && val > 0) {
       customWidth.value = Math.min(3840, Math.max(300, val));
-      const minHeight = Math.ceil(customWidth.value / MAX_CUSTOM_ASPECT_RATIO);
-      const maxHeight = Math.floor(customWidth.value / MIN_CUSTOM_ASPECT_RATIO);
-      customHeight.value = Math.min(3840, Math.max(300, minHeight, Math.min(customHeight.value, maxHeight)));
     }
   }
 
@@ -998,9 +997,6 @@ ${t("document.inputHere")}`;
     const val = parseInt(h, 10);
     if (!isNaN(val) && val > 0) {
       customHeight.value = Math.min(3840, Math.max(300, val));
-      const minWidth = Math.ceil(customHeight.value * MIN_CUSTOM_ASPECT_RATIO);
-      const maxWidth = Math.floor(customHeight.value * MAX_CUSTOM_ASPECT_RATIO);
-      customWidth.value = Math.min(3840, Math.max(300, minWidth, Math.min(customWidth.value, maxWidth)));
     }
   }
 
