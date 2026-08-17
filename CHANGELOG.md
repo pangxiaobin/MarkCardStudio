@@ -1,5 +1,19 @@
 # Changelog / 变更日志
 
+## [v0.1.3] - 2026-08-17
+
+### 版本功能与体验优化 / Features & UX Enhancements
+
+- **自定义尺寸解耦与独立调节**：解除自定义宽度与高度的强制比例互锁限制，允许用户在 `300 ~ 3840px` 范围内自由独立设置宽与高，彻底解决修改或清空某一维度数值时另一维度被自动篡改的问题。
+- **自定义尺寸输入体验升级**：引入输入本地缓冲状态，支持在输入框内流畅删除、清空并重新键入任意多位数字；当数值落入有效范围时卡片实时渲染更新，并在失焦（`blur`）或回车时提供智能合规兜底。
+- **尺寸与主题变更防抖优化**：为自定义尺寸、平台预设与主题变更添加轻量防抖处理（`120ms`），优化连续调节数值时的离屏 DOM 测量排版性能，使交互更平滑顺畅。
+
+---
+
+- **Custom Dimensions Decoupling & Independent Control**: Removed forced aspect-ratio coupling between custom width and height, allowing independent adjustments within `300 ~ 3840px` and eliminating accidental value overwrites when clearing or editing dimensions.
+- **Enhanced Custom Dimension Input UX**: Implemented local input buffering for smooth backspacing, clearing, and multi-digit typing; updates live preview whenever valid numbers are entered, with smart validation fallback on blur or Enter.
+- **Debounced Dimension & Theme Updates**: Added lightweight debounce (`120ms`) to custom dimensions, platform presets, and theme switches, reducing redundant offscreen DOM measurement calls during continuous adjustments.
+
 ## [v0.1.2] - 2026-08-14
 
 ### 版本功能与体验优化 / Features & UX Enhancements
