@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import {
+  AlertCircle,
   AlignLeft,
   ArrowUpCircle,
   Calendar,
@@ -10,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  CircleAlert,
   CircleHelp,
   Download,
   DownloadCloud,
@@ -74,6 +76,8 @@ const props = defineProps({
 });
 
 const iconMap = {
+  "alert-circle": AlertCircle,
+  "circle-alert": CircleAlert,
   "align-left": AlignLeft,
   "arrow-up-circle": ArrowUpCircle,
   calendar: Calendar,
@@ -99,6 +103,7 @@ const iconMap = {
   "layout-grid": LayoutGrid,
   list: List,
   loader: Loader2,
+  "loader-2": Loader2,
   maximize: Maximize2,
   minus: Minus,
   moon: Moon,

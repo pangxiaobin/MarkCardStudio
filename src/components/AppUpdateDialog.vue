@@ -35,7 +35,7 @@ const bodyText = computed(() => updateInfo.value?.body || "");
       ]"
     >
       <AppIcon
-        :name="toastNotice.type === 'success' ? 'check-circle' : toastNotice.type === 'error' ? 'power' : 'info'"
+        :name="toastNotice.type === 'success' ? 'check-circle' : toastNotice.type === 'error' ? 'alert-circle' : 'info'"
         :size="16"
       />
       <span>{{ toastNotice.message }}</span>

@@ -26,9 +26,9 @@ const { isChecking, updateAvailable, isUpToDate, checkForUpdates } = useUpdater(
       </div>
     </div>
 
-    <!-- Top Right Actions: Distinct Icon-Only Check for Updates + Settings -->
+    <!-- Top Right Actions: Distinct Check for Updates + Settings -->
     <div class="inline-flex items-center gap-2.5">
-      <!-- Obvious Upgrade/Update Icon Button (No Text) -->
+      <!-- Check for Updates Button -->
       <button
         type="button"
         class="relative inline-flex h-8.5 w-8.5 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 disabled:opacity-60 cursor-pointer shadow-2xs"
@@ -50,7 +50,6 @@ const { isChecking, updateAvailable, isUpToDate, checkForUpdates } = useUpdater(
         "
         @click="checkForUpdates(false)"
       >
-        <!-- Standard Upgrade Icon (Arrow Up Inside Circle) -->
         <AppIcon
           :name="isChecking ? 'loader-2' : isUpToDate ? 'check-circle' : 'arrow-up-circle'"
           :size="18"
