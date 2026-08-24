@@ -160,13 +160,14 @@ async function prepareContent() {
 }
 
 function replaceBrokenContentImages() {
-  for (const image of canvasElement.value?.querySelectorAll("img.card-image") || []) {
+  for (const image of canvasElement.value?.querySelectorAll("img.card-image, img.card-inline-image") || []) {
     if (image.complete && image.naturalWidth > 0) continue;
-    const fallback = document.createElement("p");
-    fallback.className = "card-image-fallback";
+    const isInline = image.classList.contains("card-inline-image");
+    const fallback = document.createElement(isInline ? "span" : "p");
+    if (!isInline) fallback.className = "card-paragraph";
     fallback.textContent = image.getAttribute("data-original-markdown")
       || `![${image.alt || ""}](${image.getAttribute("src") || ""})`;
-    const wrapper = image.closest(".card-image-wrap");
+    const wrapper = image.closest(".card-image-wrap, .card-inline-image-wrap");
     (wrapper || image).replaceWith(fallback);
   }
 }

@@ -673,7 +673,7 @@ async function inlineImagesForExport(root, renderPixelRatio) {
 
         // Large local files can make html-to-image's cloned SVG exceed WebView
         // limits even though the live preview can decode the original source.
-        if (img.classList.contains("card-image")) {
+        if (img.classList.contains("card-image") || img.classList.contains("card-inline-image")) {
           const normalized = rasterizeContentImage(img, renderPixelRatio);
           if (normalized) {
             img.src = normalized;
@@ -715,13 +715,13 @@ async function inlineImagesForExport(root, renderPixelRatio) {
 }
 
 function replaceFailedContentImage(image) {
-  if (!image.classList.contains("card-image")) return false;
+  if (!image.classList.contains("card-image") && !image.classList.contains("card-inline-image")) return false;
 
-  const fallback = document.createElement("p");
-  fallback.className = "card-image-fallback";
+  const fallback = document.createElement(image.classList.contains("card-inline-image") ? "span" : "p");
+  if (!image.classList.contains("card-inline-image")) fallback.className = "card-paragraph";
   fallback.textContent = image.getAttribute("data-original-markdown")
     || `![${image.alt || ""}](${image.getAttribute("src") || ""})`;
-  const wrapper = image.closest(".card-image-wrap");
+  const wrapper = image.closest(".card-image-wrap, .card-inline-image-wrap");
   (wrapper || image).replaceWith(fallback);
   return true;
 }
@@ -764,7 +764,7 @@ function compositeContentImages(canvas, root) {
 
   const scaleX = canvas.width / rootRect.width;
   const scaleY = canvas.height / rootRect.height;
-  for (const image of root.querySelectorAll("img.card-image")) {
+  for (const image of root.querySelectorAll("img.card-image, img.card-inline-image")) {
     if (!image.complete || image.naturalWidth <= 0) continue;
 
     const rect = image.getBoundingClientRect();

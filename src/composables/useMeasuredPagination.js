@@ -74,7 +74,9 @@ function blockTextLength(block) {
     );
   }
   if (block.type === "table") {
-    return [...(block.headers || []), ...(block.rows || []).flat()]
+    const cells = [...(block.headers || []), ...(block.rows || []).flat()];
+    return cells
+      .map((cell) => typeof cell === "string" ? cell : cell?.text || "")
       .join("")
       .replace(/\s/g, "").length;
   }
@@ -401,7 +403,11 @@ async function splitBlock(block, currentBlocks, fits) {
       if (headText && tailText) {
         const withText = (text) => block.type === "blockquote"
           ? { ...block, content: text, lines: [text] }
-          : { ...block, [textField]: text };
+          : {
+            ...block,
+            [textField]: text,
+            ...(block.type === "paragraph" ? { textContent: text } : {}),
+          };
         return {
           head: withText(headText),
           tail: withText(tailText),

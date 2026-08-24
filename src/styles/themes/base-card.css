@@ -348,17 +348,22 @@
   border-radius: 8px;
 }
 
-.card-image-fallback {
-  margin: 8px 0;
-  padding: 8px 10px;
-  overflow-wrap: anywhere;
-  border: 1px dashed rgba(100, 116, 139, 0.55);
+.card-inline-image-wrap {
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 12em;
+  vertical-align: middle;
+  overflow: hidden;
   border-radius: 8px;
-  color: inherit;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  opacity: 0.78;
+}
+
+.card-inline-image {
+  display: block;
+  max-width: 100%;
+  max-height: 12em;
+  width: auto;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .card-canvas.card-layout-landscape .card-image-wrap {

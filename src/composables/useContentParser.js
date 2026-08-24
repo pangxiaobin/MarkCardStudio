@@ -207,17 +207,23 @@ function parseListTokens(tokens, startIndex) {
   const closeType = openToken.type.replace("_open", "_close");
   const endIndex = findClosingToken(tokens, startIndex, openToken.type, closeType);
   const items = [];
+  const images = [];
+  let imageOffset = 0;
 
   for (let index = startIndex + 1; index < endIndex; index += 1) {
     if (tokens[index].type !== "list_item_open") continue;
     const itemEnd = findClosingToken(tokens, index, "list_item_open", "list_item_close");
     const inlineTokens = tokens.slice(index + 1, itemEnd).filter((token) => token.type === "inline");
-    const text = inlineTokens.map(inlineTokenText).filter(Boolean).join(" ");
+    const parsed = collectInlineParts(inlineTokens, imageOffset);
+    const text = parsed.text;
+    images.push(...parsed.images);
+    imageOffset += parsed.images.length;
     const taskInput = inlineTokens
       .flatMap((token) => token.children || [])
       .find((child) => child.type === "html_inline" && child.content.includes("task-list-item-checkbox"));
     items.push({
       text,
+      images: parsed.images,
       isTask: Boolean(taskInput),
       checked: Boolean(taskInput?.content.includes("checked")),
     });
@@ -229,7 +235,8 @@ function parseListTokens(tokens, startIndex) {
     return {
       block: {
         type: "task-list",
-        items: items.map((item) => ({ checked: item.checked, text: item.text })),
+        items: items.map((item) => ({ checked: item.checked, text: item.text, images: item.images })),
+        images,
       },
       endIndex,
     };
@@ -240,7 +247,8 @@ function parseListTokens(tokens, startIndex) {
   return {
     block: {
       type: ordered ? "ordered-list" : "list",
-      items: items.map((item) => item.text),
+      items: items.map((item) => ({ text: item.text, images: item.images })),
+      images,
       ...(ordered ? { startIndex: Math.max(0, start - 1) } : {}),
     },
     endIndex,
@@ -253,6 +261,8 @@ function parseTableTokens(tokens, startIndex) {
   const rows = [];
   let currentRow = null;
   let inHeader = false;
+  const images = [];
+  let imageOffset = 0;
 
   for (let index = startIndex + 1; index < endIndex; index += 1) {
     const token = tokens[index];
@@ -260,7 +270,10 @@ function parseTableTokens(tokens, startIndex) {
     if (token.type === "thead_close") inHeader = false;
     if (token.type === "tr_open") currentRow = [];
     if ((token.type === "th_open" || token.type === "td_open") && tokens[index + 1]?.type === "inline") {
-      currentRow?.push(inlineTokenText(tokens[index + 1]));
+      const parsed = parseInlineToken(tokens[index + 1], imageOffset);
+      currentRow?.push({ text: parsed.text, images: parsed.images });
+      images.push(...parsed.images);
+      imageOffset += parsed.images.length;
     }
     if (token.type === "tr_close" && currentRow) {
       if (inHeader && headers.length === 0) headers.push(...currentRow);
@@ -269,7 +282,7 @@ function parseTableTokens(tokens, startIndex) {
     }
   }
 
-  return { block: { type: "table", headers, rows }, endIndex };
+  return { block: { type: "table", headers, rows, images }, endIndex };
 }
 
 function parseImageToken(token) {
@@ -278,25 +291,106 @@ function parseImageToken(token) {
     .filter((child) => !["image", "softbreak", "hardbreak"].includes(child.type))
     .some((child) => child.content?.trim());
   if (!images.length || nonImageContent) return [];
-  return images.map((image) => {
-    const alt = image.content || "";
-    const src = image.attrGet("src") || "";
-    const title = image.attrGet("title") || "";
-    let displaySrc = src;
-    try {
-      displaySrc = decodeURIComponent(src);
-    } catch {
-      // Keep malformed percent-encoded paths readable instead of dropping them.
+  return images.map((image) => createImageBlock(image));
+}
+
+function createImageBlock(image) {
+  const alt = image.content || "";
+  const src = image.attrGet("src") || "";
+  const title = image.attrGet("title") || "";
+  let displaySrc = src;
+  try {
+    displaySrc = decodeURIComponent(src);
+  } catch {
+    // Keep malformed percent-encoded paths readable instead of dropping them.
+  }
+  const titleSuffix = title ? ` "${title}"` : "";
+  return {
+    type: "image",
+    alt,
+    src,
+    title,
+    original: `![${alt}](${displaySrc}${titleSuffix})`,
+  };
+}
+
+function findImageMarkdownRange(source, image, fromIndex = 0) {
+  const prefix = `![${image.content || ""}]`;
+  const start = source.indexOf(prefix, fromIndex);
+  if (start < 0) return null;
+  const openParen = source.indexOf("(", start + prefix.length);
+  if (openParen < 0) return null;
+
+  let depth = 0;
+  let escaped = false;
+  for (let index = openParen; index < source.length; index += 1) {
+    const char = source[index];
+    if (escaped) {
+      escaped = false;
+      continue;
     }
-    const titleSuffix = title ? ` "${title}"` : "";
-    return {
-      type: "image",
-      alt,
-      src,
-      title,
-      original: `![${alt}](${displaySrc}${titleSuffix})`,
-    };
-  });
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === "(") depth += 1;
+    if (char === ")") {
+      depth -= 1;
+      if (depth === 0) return { start, end: index + 1 };
+    }
+  }
+  return null;
+}
+
+function parseMixedImageParagraph(token, images) {
+  const parsed = parseInlineToken(token, 0, images);
+  if (!parsed.images.length) return null;
+  return {
+    type: "paragraph",
+    content: parsed.text,
+    textContent: token.content || "",
+    images: parsed.images,
+  };
+}
+
+function parseInlineToken(token, imageOffset = 0, knownImages = null) {
+  const source = token.content || "";
+  const images = knownImages || (token.children || []).filter((child) => child.type === "image");
+  if (!images.length) return { text: source.trim(), images: [] };
+  const parts = [];
+  const imageBlocks = [];
+  let cursor = 0;
+  let searchFrom = 0;
+
+  for (const image of images) {
+    const range = findImageMarkdownRange(source, image, searchFrom);
+    if (!range) continue;
+    if (range.start > cursor) parts.push(source.slice(cursor, range.start));
+    const imageBlock = createImageBlock(image);
+    imageBlock.original = source.slice(range.start, range.end);
+    imageBlock.marker = `MCARDIMGTOKEN${imageOffset + imageBlocks.length}END`;
+    imageBlocks.push(imageBlock);
+    parts.push(imageBlock.marker);
+    cursor = range.end;
+    searchFrom = range.end;
+  }
+
+  if (!imageBlocks.length) return { text: source.trim(), images: [] };
+  if (cursor < source.length) parts.push(source.slice(cursor));
+  return { text: parts.join(""), images: imageBlocks };
+}
+
+function collectInlineParts(tokens, imageOffset = 0) {
+  const parts = [];
+  const images = [];
+  let offset = imageOffset;
+  for (const token of tokens || []) {
+    const parsed = parseInlineToken(token, offset);
+    parts.push(parsed.text);
+    images.push(...parsed.images);
+    offset += parsed.images.length;
+  }
+  return { text: parts.filter(Boolean).join(" "), images };
 }
 
 function parseHtmlImage(content) {
@@ -333,8 +427,8 @@ export function parseBlocks(input) {
     }
 
     if (token.type === "heading_open") {
-      const content = inlineTokenText(tokens[index + 1]);
-      blocks.push({ type: token.tag === "h2" ? "heading2" : "heading3", content });
+      const parsed = parseInlineToken(tokens[index + 1]);
+      blocks.push({ type: token.tag === "h2" ? "heading2" : "heading3", content: parsed.text, images: parsed.images });
       index += 2;
       continue;
     }
@@ -344,8 +438,12 @@ export function parseBlocks(input) {
       const images = parseImageToken(inlineToken);
       if (images.length) blocks.push(...images);
       else {
+        const inlineImages = (inlineToken.children || []).filter((child) => child.type === "image");
+        const mixedParagraph = inlineImages.length
+          ? parseMixedImageParagraph(inlineToken, inlineImages)
+          : null;
         const htmlImage = parseHtmlImage(inlineToken.content);
-        blocks.push(htmlImage || { type: "paragraph", content: inlineToken.content.trim() });
+        blocks.push(mixedParagraph || htmlImage || { type: "paragraph", content: inlineToken.content.trim() });
       }
       index += 2;
       continue;
@@ -367,11 +465,17 @@ export function parseBlocks(input) {
 
     if (token.type === "blockquote_open") {
       const endIndex = findClosingToken(tokens, index, "blockquote_open", "blockquote_close");
-      const lines = tokens.slice(index + 1, endIndex)
-        .filter((nestedToken) => nestedToken.type === "inline")
-        .map(inlineTokenText)
-        .filter(Boolean);
-      blocks.push({ type: "blockquote", content: lines.join(" "), lines });
+      const inlineTokens = tokens.slice(index + 1, endIndex).filter((nestedToken) => nestedToken.type === "inline");
+      const parsedLines = [];
+      const images = [];
+      let imageOffset = 0;
+      for (const inline of inlineTokens) {
+        const parsed = parseInlineToken(inline, imageOffset);
+        if (parsed.text) parsedLines.push(parsed.text);
+        images.push(...parsed.images);
+        imageOffset += parsed.images.length;
+      }
+      blocks.push({ type: "blockquote", content: parsedLines.join(" "), lines: parsedLines, images });
       index = endIndex;
       continue;
     }
@@ -382,12 +486,10 @@ export function parseBlocks(input) {
       const endIndex = findClosingToken(tokens, index, token.type, closeType);
       const title = token.info.trim().replace(new RegExp(`^${kind}\\s*`, "i"), "")
         || t(`content.${["tip", "warning", "danger"].includes(kind) ? kind : "info"}`);
-      const content = tokens.slice(index + 1, endIndex)
-        .filter((nestedToken) => nestedToken.type === "inline")
-        .map(inlineTokenText)
-        .filter(Boolean)
-        .join(" ");
-      blocks.push({ type: "callout", kind, title, content });
+      const parsed = collectInlineParts(
+        tokens.slice(index + 1, endIndex).filter((nestedToken) => nestedToken.type === "inline"),
+      );
+      blocks.push({ type: "callout", kind, title, content: parsed.text, images: parsed.images });
       index = endIndex;
       continue;
     }
@@ -409,15 +511,14 @@ export function parseBlocks(input) {
         const footnoteToken = tokens[footnoteIndex];
         if (footnoteToken.type !== "footnote_open") continue;
         const footnoteEnd = findClosingToken(tokens, footnoteIndex, "footnote_open", "footnote_close");
-        const content = tokens.slice(footnoteIndex + 1, footnoteEnd)
-          .filter((nestedToken) => nestedToken.type === "inline")
-          .map(inlineTokenText)
-          .filter(Boolean)
-          .join(" ");
+        const parsed = collectInlineParts(
+          tokens.slice(footnoteIndex + 1, footnoteEnd).filter((nestedToken) => nestedToken.type === "inline"),
+        );
         blocks.push({
           type: "footnote",
           label: String(footnoteToken.meta?.label || footnoteToken.meta?.id + 1 || ""),
-          content,
+          content: parsed.text,
+          images: parsed.images,
         });
         footnoteIndex = footnoteEnd;
       }
@@ -432,11 +533,11 @@ export function blocksToPreviewText(blocks) {
   return (blocks || [])
     .slice(0, 4)
     .map((b) => {
-      if (b.type === "paragraph") return b.content;
+      if (b.type === "paragraph") return b.textContent || b.content;
       if (b.type === "heading2" || b.type === "heading3") return b.content;
-      if (b.type === "list") return b.items?.slice(0, 2).join(" · ");
+      if (b.type === "list") return b.items?.slice(0, 2).map((i) => typeof i === "string" ? i : i?.text).join(" · ");
       if (b.type === "task-list") return b.items?.slice(0, 2).map(i => i.text).join(" · ");
-      if (b.type === "ordered-list") return b.items?.slice(0, 2).join(" · ");
+      if (b.type === "ordered-list") return b.items?.slice(0, 2).map((i) => typeof i === "string" ? i : i?.text).join(" · ");
       if (b.type === "blockquote") return b.content;
       if (b.type === "code-block") return `[${b.lang || t("content.code")}]`;
       if (b.type === "mermaid") return `[${t("content.flowchart")}]`;
@@ -451,10 +552,10 @@ export function blocksToPreviewText(blocks) {
 export function renderBlockToHtml(block) {
   switch (block.type) {
     case "heading2":
-      return `<h2 class="card-h2">${formatInline(block.content)}</h2>`;
+      return `<h2 class="card-h2">${renderInlineContent(block.content, block.images)}</h2>`;
 
     case "heading3":
-      return `<h3 class="card-h3">${formatInline(block.content)}</h3>`;
+      return `<h3 class="card-h3">${renderInlineContent(block.content, block.images)}</h3>`;
 
     case "code-block": {
       const highlighted = highlightCode(block.raw, block.lang);
@@ -470,7 +571,7 @@ export function renderBlockToHtml(block) {
 
     case "callout": {
       const icon = block.kind === "tip" ? "💡" : block.kind === "warning" ? "⚠️" : block.kind === "danger" ? "🚨" : "ℹ️";
-      return `<div class="card-callout callout-${block.kind} my-2.5 p-3 rounded-xl border flex flex-col gap-1"><div class="flex items-center gap-1.5 font-bold text-xs"><span>${icon}</span><span>${formatInline(block.title)}</span></div><div class="text-xs leading-relaxed opacity-90">${formatInline(block.content)}</div></div>`;
+      return `<div class="card-callout callout-${block.kind} my-2.5 p-3 rounded-xl border flex flex-col gap-1"><div class="flex items-center gap-1.5 font-bold text-xs"><span>${icon}</span><span>${formatInline(block.title)}</span></div><div class="text-xs leading-relaxed opacity-90">${renderInlineContent(block.content, block.images)}</div></div>`;
     }
 
     case "table": {
@@ -483,16 +584,16 @@ export function renderBlockToHtml(block) {
         : columnCount >= 4
           ? " card-table--dense"
           : "";
-      const headers = (block.headers || []).map((h) => `<th>${formatInline(h)}</th>`).join("");
+      const headers = (block.headers || []).map((h) => `<th>${renderInlineCell(h, block.images)}</th>`).join("");
       const bodyRows = (block.rows || [])
-        .map((row) => `<tr>${(row || []).map((c) => `<td>${formatInline(c)}</td>`).join("")}</tr>`)
+        .map((row) => `<tr>${(row || []).map((c) => `<td>${renderInlineCell(c, block.images)}</td>`).join("")}</tr>`)
         .join("");
       return `<div class="card-table-wrap"><table class="card-table${densityClass}"><thead><tr>${headers}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
     }
 
     case "blockquote": {
       const inner = (block.lines || [block.content || ""])
-        .map((l) => `<p>${formatInline(l)}</p>`)
+        .map((l) => `<p>${renderInlineContent(typeof l === "string" ? l : l?.text, block.images || l?.images)}</p>`)
         .join("");
       return `<blockquote class="card-blockquote">${inner}</blockquote>`;
     }
@@ -502,7 +603,7 @@ export function renderBlockToHtml(block) {
         .map((item) => {
           const icon = item.checked ? `<span class="task-badge checked">✓</span>` : `<span class="task-badge unchecked"></span>`;
           const textStyle = item.checked ? `line-through opacity-70` : ``;
-          return `<li class="card-task-item flex items-center gap-2 py-0.5"><span class="task-check-box">${icon}</span><span class="${textStyle}">${formatInline(item.text)}</span></li>`;
+          return `<li class="card-task-item flex items-center gap-2 py-0.5"><span class="task-check-box">${icon}</span><span class="${textStyle}">${renderInlineContent(item.text, item.images || block.images)}</span></li>`;
         })
         .join("");
       return `<ul class="card-task-list my-2 flex flex-col gap-1.5">${items}</ul>`;
@@ -510,7 +611,7 @@ export function renderBlockToHtml(block) {
 
     case "list": {
       const items = (block.items || [])
-        .map((item) => `<li><span class="list-dot"></span><span>${formatInline(item)}</span></li>`)
+        .map((item) => `<li><span class="list-dot"></span><span>${renderInlineContent(typeof item === "string" ? item : item?.text, item?.images || block.images)}</span></li>`)
         .join("");
       return `<ul class="card-list">${items}</ul>`;
     }
@@ -520,29 +621,59 @@ export function renderBlockToHtml(block) {
       const items = (block.items || [])
         .map((item, idx) => {
           const numStr = String(startIdx + idx + 1).padStart(2, "0");
-          return `<li class="card-ordered-item flex items-start gap-2.5 py-0.5"><span class="list-num-badge shrink-0">${numStr}</span><span class="flex-1 min-w-0">${formatInline(item)}</span></li>`;
+          return `<li class="card-ordered-item flex items-start gap-2.5 py-0.5"><span class="list-num-badge shrink-0">${numStr}</span><span class="flex-1 min-w-0">${renderInlineContent(typeof item === "string" ? item : item?.text, item?.images || block.images)}</span></li>`;
         })
         .join("");
       return `<ol class="card-ordered-list my-2 flex flex-col gap-2">${items}</ol>`;
     }
 
-    case "image": {
-      if (block.missing || !block.src) {
-        return `<p class="card-image-fallback">${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}</p>`;
-      }
-      return `<div class="card-image-wrap"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" data-original-markdown="${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}" class="card-image" loading="eager" /></div>`;
-    }
+    case "image":
+      return renderImageBlockToHtml(block);
 
     case "divider":
       return `<hr class="card-divider" />`;
 
     case "footnote":
-      return `<div class="card-footnote"><sup>[${escapeHtml(block.label)}]</sup><span>${formatInline(block.content)}</span></div>`;
+      return `<div class="card-footnote"><sup>[${escapeHtml(block.label)}]</sup><span>${renderInlineContent(block.content, block.images)}</span></div>`;
 
-    case "paragraph":
+    case "paragraph": {
+      if (block.images?.length) {
+        const html = renderInlineContent(block.content ?? "", block.images);
+        return `<p class="card-paragraph">${html}</p>`;
+      }
+      return `<p class="card-paragraph">${formatInline(block.content ?? "")}</p>`;
+    }
+
     default:
       return `<p class="card-paragraph">${formatInline(block.content ?? "")}</p>`;
   }
+}
+
+function renderImageBlockToHtml(block) {
+  if (block.missing || !block.src) {
+    return `<p class="card-paragraph">${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}</p>`;
+  }
+  return `<div class="card-image-wrap"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" data-original-markdown="${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}" class="card-image" loading="eager" /></div>`;
+}
+
+function renderInlineImageToHtml(image) {
+  if (image.missing || !image.src) {
+    return `<span>${escapeHtml(image.original || "")}</span>`;
+  }
+  return `<span class="card-inline-image-wrap"><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" data-original-markdown="${escapeHtml(image.original || "")}" class="card-inline-image" loading="eager" /></span>`;
+}
+
+function renderInlineContent(text, images = []) {
+  let html = formatInline(text ?? "");
+  for (const image of images || []) {
+    if (image?.marker) html = html.replaceAll(image.marker, renderInlineImageToHtml(image));
+  }
+  return html;
+}
+
+function renderInlineCell(cell, images) {
+  if (typeof cell === "string") return renderInlineContent(cell, images);
+  return renderInlineContent(cell?.text || "", cell?.images || images);
 }
 
 export function renderBlocksToHtml(blocks) {

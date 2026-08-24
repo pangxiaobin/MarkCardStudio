@@ -689,7 +689,9 @@ export function useStudioDocument() {
         await resolveBlockImages(allBlocks, sourcePath.value);
         if (abortController.signal.aborted) return;
         const resolvedMarkdown = section.bodyMarkdown;
-        const imageUrl = allBlocks.find((block) => block.type === "image")?.src || "";
+        const imageUrl = allBlocks
+          .flatMap((block) => block.type === "image" ? [block] : (block.images || []))
+          .find((image) => image.src && !image.missing)?.src || "";
         const blockPages = await paginationSession.paginate(
           allBlocks,
           {
@@ -1296,14 +1298,17 @@ function getLineType(text) {
 
 async function resolveBlockImages(blocks, basePath) {
   for (const block of blocks || []) {
-    if (block.type !== "image" || !block.src) continue;
-    const replacement = await tryResolveImage(block.src, basePath);
-    if (replacement) {
-      block.src = replacement;
-      block.missing = false;
-    } else if (!/^(https?:|data:|blob:)/i.test(block.src)) {
-      // Keep the original Markdown visible when a local asset is unavailable.
-      block.missing = true;
+    const images = block.type === "image" ? [block] : block.images || [];
+    for (const image of images) {
+      if (!image.src) continue;
+      const replacement = await tryResolveImage(image.src, basePath);
+      if (replacement) {
+        image.src = replacement;
+        image.missing = false;
+      } else if (!/^(https?:|data:|blob:)/i.test(image.src)) {
+        // Keep the original Markdown visible when a local asset is unavailable.
+        image.missing = true;
+      }
     }
   }
 }
