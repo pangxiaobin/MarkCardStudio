@@ -80,6 +80,11 @@ function blockTextLength(block) {
       .join("")
       .replace(/\s/g, "").length;
   }
+  if (block.type === "html") {
+    return String(block.content || "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s/g, "").length;
+  }
   return String(block.raw || "").replace(/\s/g, "").length;
 }
 

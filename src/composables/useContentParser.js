@@ -2,7 +2,7 @@
  * useContentParser.js
  * Block-level Markdown parser for MarkCard Studio
  * Supports: paragraph, heading2, heading3, code-block, mermaid, table,
- *           blockquote, list, ordered-list, task-list, image, divider
+ *           blockquote, list, ordered-list, task-list, image, html, divider
  */
 
 import hljs from "highlight.js/lib/core";
@@ -44,7 +44,7 @@ mermaid.initialize({
 });
 
 const markdownParser = MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   breaks: true,
 });
@@ -98,10 +98,69 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
+const SAFE_HTML_TAGS = new Set([
+  "a", "abbr", "b", "blockquote", "br", "code", "del", "div", "em", "i", "img",
+  "li", "mark", "ol", "p", "pre", "q", "s", "small", "span", "strong", "sub", "sup",
+  "table", "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul",
+]);
+const SAFE_HTML_ATTRIBUTES = new Set([
+  "alt", "align", "class", "colspan", "height", "href", "name", "rel", "rowspan",
+  "src", "target", "title", "width",
+]);
+const VOID_HTML_TAGS = new Set(["br", "img"]);
+
+function sanitizeHtmlUrl(value, allowDataImage = false) {
+  const normalized = String(value || "").trim().replace(/&amp;/g, "&");
+  if (!normalized) return "";
+  if (/^(#|\/|https?:|mailto:)/i.test(normalized)) return normalized;
+  if (allowDataImage && /^data:image\/(gif|png|jpe?g|webp);base64,/i.test(normalized)) return normalized;
+  return "";
+}
+
+function sanitizeHtmlTag(tagSource) {
+  const match = String(tagSource || "").match(/^<\s*(\/?)\s*([a-z][\w:-]*)([\s\S]*?)>$/i);
+  if (!match) return "";
+  const closing = Boolean(match[1]);
+  const tagName = match[2].toLowerCase();
+  if (!SAFE_HTML_TAGS.has(tagName)) return "";
+  if (closing) return `</${tagName}>`;
+
+  const attributes = [];
+  const rawAttributes = match[3].replace(/\/\s*$/, "");
+  const attributePattern = /([:\w-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  let attributeMatch;
+  while ((attributeMatch = attributePattern.exec(rawAttributes))) {
+    const name = attributeMatch[1].toLowerCase();
+    if (!SAFE_HTML_ATTRIBUTES.has(name)) continue;
+    const value = attributeMatch[2] ?? attributeMatch[3] ?? attributeMatch[4];
+    if (value === undefined) {
+      if (["name"].includes(name)) attributes.push(name);
+      continue;
+    }
+    if (name === "href" || name === "src") {
+      const safeUrl = sanitizeHtmlUrl(value, name === "src");
+      if (!safeUrl) continue;
+      attributes.push(`${name}="${escapeHtml(safeUrl)}"`);
+      continue;
+    }
+    attributes.push(`${name}="${escapeHtml(value)}"`);
+  }
+
+  const suffix = VOID_HTML_TAGS.has(tagName) ? " /" : "";
+  return `<${tagName}${attributes.length ? ` ${attributes.join(" ")}` : ""}${suffix}>`;
+}
+
+function sanitizeHtmlFragment(source) {
+  return String(source || "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<\/?[a-z][\w:-]*[\s\S]*?>/gi, (tag) => sanitizeHtmlTag(tag) || escapeHtml(tag));
+}
+
 // ─── Inline formatting with KaTeX & Rich Syntaxes ──────────────────────────────
 export function formatInline(text) {
   if (!text) return "";
   const mathFragments = [];
+  const htmlFragments = [];
   const storeMath = (expr, displayMode) => {
     let rendered;
     try {
@@ -126,6 +185,14 @@ export function formatInline(text) {
   let html = String(text)
     .replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => storeMath(expr, true))
     .replace(/\$([^\n$]+)\$/g, (_, expr) => storeMath(expr, false));
+
+  html = html.replace(/<\/?[a-z][\w:-]*[\s\S]*?>/gi, (tag) => {
+    const sanitized = sanitizeHtmlTag(tag);
+    if (!sanitized) return tag;
+    const token = `MCARDHTMLTOKEN${htmlFragments.length}END`;
+    htmlFragments.push(sanitized);
+    return token;
+  });
 
   html = escapeHtml(html);
 
@@ -153,6 +220,9 @@ export function formatInline(text) {
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
   mathFragments.forEach((fragment, index) => {
     html = html.replace(`MCARDMATHTOKEN${index}END`, fragment);
+  });
+  htmlFragments.forEach((fragment, index) => {
+    html = html.replaceAll(`MCARDHTMLTOKEN${index}END`, fragment);
   });
   return html;
 }
@@ -350,34 +420,46 @@ function parseMixedImageParagraph(token, images) {
     content: parsed.text,
     textContent: token.content || "",
     images: parsed.images,
+    imageOnly: parsed.imageOnly,
   };
 }
 
 function parseInlineToken(token, imageOffset = 0, knownImages = null) {
   const source = token.content || "";
   const images = knownImages || (token.children || []).filter((child) => child.type === "image");
-  if (!images.length) return { text: source.trim(), images: [] };
+  const htmlImageRanges = findHtmlImageRanges(source, imageOffset + images.length);
+  const ranges = [];
+  let markdownImageIndex = 0;
+  for (const image of images) {
+    const range = findImageMarkdownRange(source, image, markdownImageIndex);
+    if (!range) continue;
+    const imageBlock = createImageBlock(image);
+    imageBlock.original = source.slice(range.start, range.end);
+    ranges.push({ ...range, image: imageBlock });
+    markdownImageIndex = range.end;
+  }
+  ranges.push(...htmlImageRanges);
+  ranges.sort((left, right) => left.start - right.start);
+  if (!images.length && !htmlImageRanges.length) return { text: source.trim(), images: [] };
   const parts = [];
   const imageBlocks = [];
   let cursor = 0;
-  let searchFrom = 0;
 
-  for (const image of images) {
-    const range = findImageMarkdownRange(source, image, searchFrom);
-    if (!range) continue;
+  for (const range of ranges) {
     if (range.start > cursor) parts.push(source.slice(cursor, range.start));
-    const imageBlock = createImageBlock(image);
-    imageBlock.original = source.slice(range.start, range.end);
-    imageBlock.marker = `MCARDIMGTOKEN${imageOffset + imageBlocks.length}END`;
-    imageBlocks.push(imageBlock);
-    parts.push(imageBlock.marker);
+    range.image.marker = `MCARDIMGTOKEN${imageOffset + imageBlocks.length}END`;
+    imageBlocks.push(range.image);
+    parts.push(range.image.marker);
     cursor = range.end;
-    searchFrom = range.end;
   }
 
   if (!imageBlocks.length) return { text: source.trim(), images: [] };
   if (cursor < source.length) parts.push(source.slice(cursor));
-  return { text: parts.join(""), images: imageBlocks };
+  return {
+    text: parts.join(""),
+    images: imageBlocks,
+    imageOnly: parts.every((part) => /^MCARDIMGTOKEN\d+END$/.test(part) || !part.trim()),
+  };
 }
 
 function collectInlineParts(tokens, imageOffset = 0) {
@@ -393,18 +475,57 @@ function collectInlineParts(tokens, imageOffset = 0) {
   return { text: parts.filter(Boolean).join(" "), images };
 }
 
-function parseHtmlImage(content) {
-  const match = String(content || "").trim().match(
-    /^<img\s+[^>]*src=["']([^"']+)["'][^>]*>$/i,
-  );
-  if (!match) return null;
-  const altMatch = String(content).match(/\salt=["']([^"']*)["']/i);
+function readHtmlAttribute(tag, name) {
+  const match = String(tag || "").match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? "";
+}
+
+function createHtmlImageBlock(content) {
+  const src = readHtmlAttribute(content, "src");
+  if (!src) return null;
   return {
     type: "image",
-    src: match[1],
-    alt: altMatch?.[1] || "",
+    src,
+    alt: readHtmlAttribute(content, "alt"),
+    title: readHtmlAttribute(content, "title"),
     original: String(content || "").trim(),
   };
+}
+
+function parseHtmlImage(content) {
+  const source = String(content || "").trim();
+  return /^<img\b[\s\S]*>$/i.test(source) ? createHtmlImageBlock(source) : null;
+}
+
+function findHtmlImageRanges(source, imageOffset = 0) {
+  const ranges = [];
+  const pattern = /<img\b[^>]*>/gi;
+  let match;
+  while ((match = pattern.exec(source))) {
+    const image = createHtmlImageBlock(match[0]);
+    if (!image) continue;
+    image.marker = `MCARDIMGTOKEN${imageOffset + ranges.length}END`;
+    ranges.push({ start: match.index, end: pattern.lastIndex, image });
+  }
+  return ranges;
+}
+
+function parseHtmlBlockContent(source) {
+  const ranges = findHtmlImageRanges(source);
+  if (!ranges.length) return { type: "html", content: source };
+  const parts = [];
+  const images = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.start > cursor) parts.push(source.slice(cursor, range.start));
+    const image = range.image;
+    image.marker = `MCARDIMGTOKEN${images.length}END`;
+    images.push(image);
+    parts.push(image.marker);
+    cursor = range.end;
+  }
+  if (cursor < source.length) parts.push(source.slice(cursor));
+  return { type: "html", content: parts.join(""), images };
 }
 
 export function parseBlocks(input) {
@@ -439,11 +560,13 @@ export function parseBlocks(input) {
       if (images.length) blocks.push(...images);
       else {
         const inlineImages = (inlineToken.children || []).filter((child) => child.type === "image");
-        const mixedParagraph = inlineImages.length
+        const hasHtmlImage = /<img\b/i.test(inlineToken.content || "");
+        const mixedParagraph = inlineImages.length || hasHtmlImage
           ? parseMixedImageParagraph(inlineToken, inlineImages)
           : null;
         const htmlImage = parseHtmlImage(inlineToken.content);
-        blocks.push(mixedParagraph || htmlImage || { type: "paragraph", content: inlineToken.content.trim() });
+        if (mixedParagraph?.imageOnly) blocks.push(...mixedParagraph.images);
+        else blocks.push(mixedParagraph || htmlImage || { type: "paragraph", content: inlineToken.content.trim() });
       }
       index += 2;
       continue;
@@ -502,6 +625,7 @@ export function parseBlocks(input) {
     if (token.type === "html_block") {
       const image = parseHtmlImage(token.content);
       if (image) blocks.push(image);
+      else if (token.content?.trim()) blocks.push(parseHtmlBlockContent(token.content));
       continue;
     }
 
@@ -543,6 +667,7 @@ export function blocksToPreviewText(blocks) {
       if (b.type === "mermaid") return `[${t("content.flowchart")}]`;
       if (b.type === "table") return `[${t("content.table")}]`;
       if (b.type === "image") return `[${t("content.image")}]`;
+      if (b.type === "html") return String(b.content || "").replace(/<[^>]+>/g, "").trim();
       return "";
     })
     .filter(Boolean);
@@ -567,6 +692,14 @@ export function renderBlockToHtml(block) {
 
     case "mermaid": {
       return `<div class="mermaid-raw-box my-2.5 flex justify-center items-center overflow-hidden p-2 bg-slate-50/70 dark:bg-slate-900/70 rounded-xl border border-slate-200/80 dark:border-slate-800"><div class="mermaid-raw" data-code="${escapeHtml(block.raw)}">${escapeHtml(block.raw)}</div></div>`;
+    }
+
+    case "html": {
+      let html = sanitizeHtmlFragment(block.content);
+      for (const image of block.images || []) {
+        if (image.marker) html = html.replaceAll(image.marker, renderInlineImageToHtml(image));
+      }
+      return html;
     }
 
     case "callout": {
