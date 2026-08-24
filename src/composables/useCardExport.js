@@ -669,7 +669,7 @@ async function inlineImagesForExport(root, renderPixelRatio) {
       if (/^data:/i.test(img.src)) {
         img.srcset = "";
         const ready = await waitForImageDecode(img);
-        if (!ready) return false;
+        if (!ready) return replaceFailedContentImage(img);
 
         // Large local files can make html-to-image's cloned SVG exceed WebView
         // limits even though the live preview can decode the original source.
@@ -677,7 +677,8 @@ async function inlineImagesForExport(root, renderPixelRatio) {
           const normalized = rasterizeContentImage(img, renderPixelRatio);
           if (normalized) {
             img.src = normalized;
-            return waitForImageDecode(img);
+            const normalizedReady = await waitForImageDecode(img);
+            return normalizedReady || replaceFailedContentImage(img);
           }
         }
         return true;
@@ -700,16 +701,29 @@ async function inlineImagesForExport(root, renderPixelRatio) {
       if (dataUrl) {
         img.srcset = "";
         img.src = dataUrl;
-        return waitForImageDecode(img);
+        const ready = await waitForImageDecode(img);
+        return ready || replaceFailedContentImage(img);
       }
 
-      return false;
+      return replaceFailedContentImage(img);
     }),
   );
 
   if (results.some((ready) => !ready)) {
     throw new Error("One or more images could not be prepared for export");
   }
+}
+
+function replaceFailedContentImage(image) {
+  if (!image.classList.contains("card-image")) return false;
+
+  const fallback = document.createElement("p");
+  fallback.className = "card-image-fallback";
+  fallback.textContent = image.getAttribute("data-original-markdown")
+    || `![${image.alt || ""}](${image.getAttribute("src") || ""})`;
+  const wrapper = image.closest(".card-image-wrap");
+  (wrapper || image).replaceWith(fallback);
+  return true;
 }
 
 function rasterizeContentImage(img, renderPixelRatio) {

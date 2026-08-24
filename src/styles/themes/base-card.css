@@ -126,7 +126,8 @@
 }
 
 /* Lists */
-.card-list, .card-ordered-list {
+.card-list,
+.card-ordered-list {
   margin: 4px 0;
   padding: 0;
   list-style: none;
@@ -135,7 +136,8 @@
   gap: 6px;
 }
 
-.card-list li, .card-ordered-list li {
+.card-list li,
+.card-ordered-list li {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -292,7 +294,8 @@
   text-align: left;
 }
 
-.card-table th, .card-table td {
+.card-table th,
+.card-table td {
   min-width: 0;
   padding: 8px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -343,6 +346,19 @@
   width: auto;
   object-fit: contain;
   border-radius: 8px;
+}
+
+.card-image-fallback {
+  margin: 8px 0;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+  border: 1px dashed rgba(100, 116, 139, 0.55);
+  border-radius: 8px;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  opacity: 0.78;
 }
 
 .card-canvas.card-layout-landscape .card-image-wrap {
@@ -418,33 +434,63 @@
 }
 
 /* Syntax Highlighting */
-.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #f43f5e; font-weight: 600; }
-.hljs-string, .hljs-title, .hljs-section, .hljs-attribute { color: #10b981; }
-.hljs-comment, .hljs-quote { color: #94a3b8; font-style: italic; }
-.hljs-number, .hljs-literal, .hljs-variable { color: #fb923c; }
-.hljs-function, .hljs-name { color: #38bdf8; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: #f43f5e;
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute {
+  color: #10b981;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable {
+  color: #fb923c;
+}
+
+.hljs-function,
+.hljs-name {
+  color: #38bdf8;
+}
 
 /* Callout Boxes */
 .card-callout {
   border-radius: 12px;
   backdrop-filter: blur(4px);
 }
+
 .card-callout.callout-tip {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.3);
   color: #047857;
 }
+
 .card-callout.callout-warning {
   background: rgba(245, 158, 11, 0.08);
   border-color: rgba(245, 158, 11, 0.3);
   color: #b45309;
 }
+
 .card-callout.callout-danger {
   background: rgba(244, 63, 94, 0.08);
   border-color: rgba(244, 63, 94, 0.3);
   color: #be123c;
 }
-.card-callout.callout-info, .card-callout.callout-note {
+
+.card-callout.callout-info,
+.card-callout.callout-note {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.3);
   color: #1d4ed8;
@@ -491,7 +537,7 @@
   opacity: 0.78;
 }
 
-.card-footnote > sup {
+.card-footnote>sup {
   flex-shrink: 0;
   font-weight: 800;
   color: #8b5cf6;

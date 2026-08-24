@@ -453,14 +453,21 @@ pub async fn resolve_local_image(
     base_path: Option<String>,
 ) -> Result<LocalImage, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let clean_path_str = path.trim().trim_start_matches("file://");
+        let clean_path_str = path.trim();
 
         if is_remote_or_data_url(clean_path_str) {
             return Err("Only local image paths can be resolved by the backend".to_string());
         }
 
-        let raw_p = Path::new(clean_path_str);
-        let p = expand_tilde(&app, raw_p);
+        let raw_p = if clean_path_str.to_ascii_lowercase().starts_with("file://") {
+            Url::parse(clean_path_str)
+                .map_err(|err| format!("Invalid local image URL: {err}"))?
+                .to_file_path()
+                .map_err(|_| "Local image URL does not contain a valid file path".to_string())?
+        } else {
+            PathBuf::from(clean_path_str)
+        };
+        let p = expand_tilde(&app, &raw_p);
 
         let resolved = if p.is_absolute() && p.exists() {
             p
@@ -493,6 +500,10 @@ pub async fn resolve_local_image(
                 candidate
             }
         };
+
+        if !resolved.is_file() {
+            return Err(format!("Image file was not found: {}", resolved.display()));
+        }
 
         let media_type = image_media_type(&resolved)?;
         let bytes = fs::read(&resolved)

@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { parseBlocks, blocksToPreviewText } from "./useContentParser.js";
 import { useCustomFonts } from "./useCustomFonts.js";
@@ -633,6 +633,7 @@ export function useStudioDocument() {
   let parseVersion = 0;
   let debounceTimer = null;
   let paginationAbortController = null;
+  let suppressDocumentWatchers = false;
 
   async function updatePagesNow() {
     paginationAbortController?.abort();
@@ -763,6 +764,7 @@ export function useStudioDocument() {
   watch(
     sourcePath,
     () => {
+      if (suppressDocumentWatchers) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       updatePagesNow();
     },
@@ -779,6 +781,7 @@ export function useStudioDocument() {
   watch(
     markdownSource,
     () => {
+      if (suppressDocumentWatchers) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         updatePagesNow();
@@ -826,25 +829,31 @@ export function useStudioDocument() {
 
   async function loadDocumentFromContent(file) {
     if (!file || typeof file.content !== "string") return;
-    markdownSource.value = file.content;
-    savedContent.value = file.content;
-    sourcePath.value = file.path || "";
-    if (file.path) {
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch {
-        // Ignore
+    suppressDocumentWatchers = true;
+    try {
+      markdownSource.value = file.content;
+      savedContent.value = file.content;
+      sourcePath.value = file.path || "";
+      if (file.path) {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          // Ignore
+        }
       }
+      resetHistory(file.content);
+      activePageIndex.value = 0;
+      const displayName = file.name || file.fileName || t("runtime.markdownDocument");
+      autoSaveStatus.value = file.path ? t("runtime.fileOpened") : t("runtime.contentImported");
+      if (debounceTimer) clearTimeout(debounceTimer);
+      await nextTick();
+      await updatePagesNow();
+      exportMessage.value = file.path
+        ? t("runtime.opened", { name: displayName, count: pages.value.length })
+        : t("runtime.imported", { name: displayName, count: pages.value.length });
+    } finally {
+      suppressDocumentWatchers = false;
     }
-    resetHistory(file.content);
-    activePageIndex.value = 0;
-    const displayName = file.name || file.fileName || t("runtime.markdownDocument");
-    autoSaveStatus.value = file.path ? t("runtime.fileOpened") : t("runtime.contentImported");
-    if (debounceTimer) clearTimeout(debounceTimer);
-    await updatePagesNow();
-    exportMessage.value = file.path
-      ? t("runtime.opened", { name: displayName, count: pages.value.length })
-      : t("runtime.imported", { name: displayName, count: pages.value.length });
   }
 
   async function openDocumentFromDialog() {
@@ -1242,16 +1251,9 @@ function parseMarkdownSections(source, mode = "h2", delimiter = "---", maxLen = 
     sections.push(currentSection);
   }
 
-  let finalSections = sections;
-
-  if (!finalSections.length) {
-    const remainingLines = lines.filter((_, index) => index !== documentTitleLineIndex);
-    finalSections = [{
-      title: "",
-      bodyMarkdown: remainingLines.join("\n"),
-      cover: false,
-    }];
-  }
+  // With no page break, all body lines already belong to the cover. Creating
+  // an additional fallback section here would render the entire document twice.
+  const finalSections = sections;
 
   const validSections = finalSections.filter(
     (sec) => Boolean(sec.title && sec.title.trim()) || Boolean(sec.bodyMarkdown && sec.bodyMarkdown.trim())
@@ -1296,21 +1298,34 @@ async function resolveBlockImages(blocks, basePath) {
   for (const block of blocks || []) {
     if (block.type !== "image" || !block.src) continue;
     const replacement = await tryResolveImage(block.src, basePath);
-    if (replacement) block.src = replacement;
+    if (replacement) {
+      block.src = replacement;
+      block.missing = false;
+    } else if (!/^(https?:|data:|blob:)/i.test(block.src)) {
+      // Keep the original Markdown visible when a local asset is unavailable.
+      block.missing = true;
+    }
   }
 }
 
 async function tryResolveImage(target, basePath) {
   if (!target) return "";
 
-  let raw = target.trim().replace(/^<(.+)>$/, "$1").replace(/\s+["'].*["']$/, "");
+  const rawTarget = target.trim().replace(/^<(.+)>$/, "$1");
 
-  if (raw.startsWith("file://")) {
-    raw = raw.replace(/^file:\/\//, "");
+  if (/^(https?:|data:|blob:)/i.test(rawTarget)) {
+    return rawTarget;
   }
 
-  if (/^(https?:|data:|blob:)/i.test(raw)) {
-    return raw;
+  // markdown-it percent-encodes non-ASCII and spaces in image destinations.
+  // Decode local paths before handing them to the filesystem resolver.
+  let raw = rawTarget;
+  if (!/^file:\/\//i.test(rawTarget)) {
+    try {
+      raw = decodeURIComponent(rawTarget);
+    } catch {
+      raw = rawTarget;
+    }
   }
 
   const cacheKey = `${basePath || ""}::${raw}`;

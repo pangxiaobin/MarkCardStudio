@@ -38,6 +38,7 @@ const { t } = useI18n();
 const canvasElement = ref(null);
 const scrollAreaElement = ref(null);
 const detectedOverflow = ref(false);
+let prepareVersion = 0;
 
 const geometry = computed(() => {
   const width = Number(props.selectedPlatform?.width) || 1080;
@@ -146,13 +147,28 @@ function waitForImage(image) {
 }
 
 async function prepareContent() {
+  const version = ++prepareVersion;
   await nextTick();
-  if (!canvasElement.value) return;
+  if (!canvasElement.value || version !== prepareVersion) return;
   await renderMermaidDiagrams(canvasElement.value);
   if (document.fonts?.ready) await document.fonts.ready;
   await Promise.all(Array.from(canvasElement.value.querySelectorAll("img")).map(waitForImage));
+  if (version !== prepareVersion) return;
+  replaceBrokenContentImages();
   await nextTick();
   detectedOverflow.value = hasOverflow();
+}
+
+function replaceBrokenContentImages() {
+  for (const image of canvasElement.value?.querySelectorAll("img.card-image") || []) {
+    if (image.complete && image.naturalWidth > 0) continue;
+    const fallback = document.createElement("p");
+    fallback.className = "card-image-fallback";
+    fallback.textContent = image.getAttribute("data-original-markdown")
+      || `![${image.alt || ""}](${image.getAttribute("src") || ""})`;
+    const wrapper = image.closest(".card-image-wrap");
+    (wrapper || image).replaceWith(fallback);
+  }
 }
 
 function hasOverflow() {

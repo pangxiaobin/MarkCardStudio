@@ -278,12 +278,25 @@ function parseImageToken(token) {
     .filter((child) => !["image", "softbreak", "hardbreak"].includes(child.type))
     .some((child) => child.content?.trim());
   if (!images.length || nonImageContent) return [];
-  return images.map((image) => ({
-    type: "image",
-    alt: image.content || "",
-    src: image.attrGet("src") || "",
-    title: image.attrGet("title") || "",
-  }));
+  return images.map((image) => {
+    const alt = image.content || "";
+    const src = image.attrGet("src") || "";
+    const title = image.attrGet("title") || "";
+    let displaySrc = src;
+    try {
+      displaySrc = decodeURIComponent(src);
+    } catch {
+      // Keep malformed percent-encoded paths readable instead of dropping them.
+    }
+    const titleSuffix = title ? ` "${title}"` : "";
+    return {
+      type: "image",
+      alt,
+      src,
+      title,
+      original: `![${alt}](${displaySrc}${titleSuffix})`,
+    };
+  });
 }
 
 function parseHtmlImage(content) {
@@ -292,7 +305,12 @@ function parseHtmlImage(content) {
   );
   if (!match) return null;
   const altMatch = String(content).match(/\salt=["']([^"']*)["']/i);
-  return { type: "image", src: match[1], alt: altMatch?.[1] || "" };
+  return {
+    type: "image",
+    src: match[1],
+    alt: altMatch?.[1] || "",
+    original: String(content || "").trim(),
+  };
 }
 
 export function parseBlocks(input) {
@@ -508,8 +526,12 @@ export function renderBlockToHtml(block) {
       return `<ol class="card-ordered-list my-2 flex flex-col gap-2">${items}</ol>`;
     }
 
-    case "image":
-      return `<div class="card-image-wrap"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" class="card-image" loading="eager" /></div>`;
+    case "image": {
+      if (block.missing || !block.src) {
+        return `<p class="card-image-fallback">${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}</p>`;
+      }
+      return `<div class="card-image-wrap"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" data-original-markdown="${escapeHtml(block.original || `![${block.alt || ""}](${block.src || ""})`)}" class="card-image" loading="eager" /></div>`;
+    }
 
     case "divider":
       return `<hr class="card-divider" />`;
