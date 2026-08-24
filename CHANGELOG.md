@@ -1,5 +1,27 @@
 # Changelog / 变更日志
 
+## [v0.1.4] - 2026-08-25
+
+### 图片、HTML 与导出修复 / Image, HTML & Export Fixes
+
+- **本地图片渲染与导出修复**：支持相对路径、绝对路径、`file://` 路径及中文/空格路径的本地图片，并确保预览、分页和导出使用一致的图片数据。
+- **内联图片支持**：图片不再要求单独占一行，普通段落、列表、任务列表、表格、引用、提示块、标题和脚注中的图片均可匹配。
+- **缺失图片回退**：图片无法找到或加载失败时显示原始 Markdown 文本，不再使用特殊占位样式。
+- **HTML Markdown 支持**：支持常见 HTML 标签和 HTML 图片语法；危险标签与事件属性会被过滤，避免脚本注入。
+- **重复渲染修复**：修复导入无分页标题 Markdown 时正文被重复渲染的问题，并移除重复内容页。
+- **导出稳定性改进**：完善图片失败回退、内联图片合成及多页面导出处理。
+
+---
+
+- **Local Image Rendering & Export**: Fixed local images with relative, absolute, `file://`, Chinese, and space-containing paths across preview, pagination, and export.
+- **Inline Image Support**: Images can now be matched inside paragraphs, lists, task lists, tables, blockquotes, callouts, headings, and footnotes instead of requiring a standalone line.
+- **Missing Image Fallback**: Unavailable or failed images now display their original Markdown text without special placeholder styling.
+- **HTML in Markdown**: Added support for common HTML tags and HTML image syntax with filtering for dangerous tags and event attributes.
+- **Duplicate Rendering Fix**: Fixed imported Markdown without pagination headings being rendered twice and removed duplicate content pages.
+- **Export Reliability**: Improved failed-image fallback, inline-image compositing, and multipage export handling.
+
+---
+
 ## [v0.1.3] - 2026-08-17
 
 ### 版本功能与体验优化 / Features & UX Enhancements

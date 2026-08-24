@@ -8,7 +8,7 @@
     <a href="https://markcard.woollypix.cn/">官方网站</a>
   </p>
   <p>
-    <img alt="版本" src="https://img.shields.io/badge/version-0.1.0-6d28d9" />
+    <img alt="版本" src="https://img.shields.io/badge/version-0.1.4-6d28d9" />
     <img alt="Vue 3" src="https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white" />
     <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white" />
     <img alt="GPL v3 许可证" src="https://img.shields.io/badge/license-GPL--3.0-blue" />
