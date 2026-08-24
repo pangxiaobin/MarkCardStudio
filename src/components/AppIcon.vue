@@ -19,6 +19,7 @@ import {
   FilePlus2,
   FileText,
   FolderOpen,
+  Hash,
   Heading2,
   Heading3,
   HeartHandshake,
@@ -27,6 +28,7 @@ import {
   Layers,
   LayoutGrid,
   List,
+  Loader,
   Loader2,
   Maximize2,
   Minus,
@@ -42,6 +44,7 @@ import {
   Quote,
   Redo2,
   RefreshCw,
+  RotateCw,
   Save,
   Settings2,
   SlidersHorizontal,
@@ -83,6 +86,7 @@ const iconMap = {
   calendar: Calendar,
   check: Check,
   "check-circle": CheckCircle2,
+  "check-circle-2": CheckCircle2,
   "chevron-down": ChevronDown,
   "chevron-left": ChevronLeft,
   "chevron-right": ChevronRight,
@@ -93,7 +97,9 @@ const iconMap = {
   "external-link": ExternalLink,
   "file-plus-2": FilePlus2,
   "file-text": FileText,
+  document: FileText,
   "folder-open": FolderOpen,
+  hash: Hash,
   "heading-2": Heading2,
   "heading-3": Heading3,
   "heart-handshake": HeartHandshake,
@@ -104,6 +110,7 @@ const iconMap = {
   list: List,
   loader: Loader2,
   "loader-2": Loader2,
+  spinner: Loader2,
   maximize: Maximize2,
   minus: Minus,
   moon: Moon,
@@ -117,7 +124,9 @@ const iconMap = {
   power: Power,
   quote: Quote,
   redo: Redo2,
+  refresh: RefreshCw,
   "refresh-cw": RefreshCw,
+  "rotate-cw": RotateCw,
   save: Save,
   settings: Settings2,
   sliders: SlidersHorizontal,
@@ -132,7 +141,10 @@ const iconMap = {
   x: X,
 };
 
-const iconComponent = computed(() => iconMap[props.name] ?? FileText);
+const iconComponent = computed(() => {
+  if (!props.name) return null;
+  return iconMap[props.name] || null;
+});
 </script>
 
 <template>
