@@ -292,7 +292,8 @@ jobs:
                 throw new Error(`Signature file ${sigAsset.name} is empty!`);
               }
 
-              const url = targetAsset.browser_download_url;
+              // Use canonical published release tag URL instead of temporary draft untagged URL
+              const url = `https://github.com/${owner}/${repo}/releases/download/${tag}/${targetAsset.name}`;
               const entry = { signature, url };
 
               console.log(`Matched signature for ${targetName}`);
