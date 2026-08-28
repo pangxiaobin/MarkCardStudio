@@ -36,10 +36,9 @@
 /* Translucent Frost Glass Blockquote */
 .card-canvas.theme-instagram .card-blockquote {
   border-left: 4px solid #fd1d1d;
-  background: linear-gradient(90deg, rgba(253, 29, 29, 0.08), rgba(131, 58, 180, 0.04));
+  background: linear-gradient(90deg, rgba(253, 29, 29, 0.1), rgba(131, 58, 180, 0.06));
   color: #1f2937;
   border-radius: 0 16px 16px 0;
-  backdrop-filter: blur(8px);
   padding: 10px 16px;
 }
 

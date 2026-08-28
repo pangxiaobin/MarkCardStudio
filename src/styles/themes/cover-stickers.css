@@ -206,7 +206,7 @@
 .card-canvas.theme-byte-pulse.is-cover .cover-sticker-layer::before { background: #ef233c; border-radius: 0; } .card-canvas.theme-byte-pulse.is-cover .cover-sticker-layer::after { background: #00a6ff; border-radius: 0; }
 
 .card-canvas.theme-macos-window.is-cover h1 { max-width: 88%; margin-top: 24px; }
-.card-canvas.theme-macos-window.is-cover .cover-sticker { background: rgba(255,255,255,.72); border: 1px solid rgba(96,165,250,.5); border-radius: 14px; backdrop-filter: blur(8px); }
+.card-canvas.theme-macos-window.is-cover .cover-sticker { background: rgba(255,255,255,.85); border: 1px solid rgba(96,165,250,.5); border-radius: 14px; }
 .card-canvas.theme-macos-window.is-cover .cover-sticker-layer::before { background: #34c759; } .card-canvas.theme-macos-window.is-cover .cover-sticker-layer::after { background: #0a84ff; }
 
 .card-canvas.theme-bauhaus.is-cover h1 { max-width: 80%; margin-top: 26px; }

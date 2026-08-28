@@ -473,7 +473,6 @@
 /* Callout Boxes */
 .card-callout {
   border-radius: 12px;
-  backdrop-filter: blur(4px);
 }
 
 .card-callout.callout-tip {

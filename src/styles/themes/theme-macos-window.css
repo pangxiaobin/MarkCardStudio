@@ -5,7 +5,7 @@
 .card-canvas.theme-macos-window h1 { color: #0f172a; font-size: clamp(24px, 5cqw, 32px); font-weight: 850; }
 .card-canvas.theme-macos-window .card-h2 { color: #2563eb; background: rgba(147,197,253,.2); padding: 5px 10px; border-radius: 8px; }
 .card-canvas.theme-macos-window .card-h3 { color: #475569; }
-.card-canvas.theme-macos-window .card-blockquote { border-left: 4px solid #0a84ff; background: rgba(255,255,255,.52); color: #334155; border-radius: 10px; box-shadow: 0 5px 15px rgba(30,64,175,.08); backdrop-filter: blur(12px); }
+.card-canvas.theme-macos-window .card-blockquote { border-left: 4px solid #0a84ff; background: rgba(255,255,255,.75); color: #334155; border-radius: 10px; box-shadow: 0 5px 15px rgba(30,64,175,.08); }
 .card-canvas.theme-macos-window .list-dot { background: #0a84ff; }
 .card-canvas.theme-macos-window .list-num-badge { background: #dbeafe; color: #1d4ed8; border-radius: 8px; }
 .card-canvas.theme-macos-window .task-badge { border-color: #0a84ff; color: #0a84ff; border-radius: 50%; }
