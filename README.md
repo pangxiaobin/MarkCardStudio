@@ -145,3 +145,7 @@ MarkCard Studio is free software licensed under the [GNU General Public License 
 ## Community
 
 - Friendly community: [linux.do](https://linux.do)
+
+## Star History
+
+[![Star History Chart](https://star-history.dera.page/svg?repos=pangxiaobin/MarkCardStudio)](https://star-history.dera.page/#pangxiaobin/MarkCardStudio)

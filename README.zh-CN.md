@@ -146,3 +146,8 @@ imgs/                    工作台截图和导出结果案例
 ## 开源许可
 
 MarkCard Studio 是采用 [GNU General Public License v3.0](LICENSE) 的自由软件。你可以按照该许可证的条款使用、研究、修改和再分发本项目。
+
+
+## Star History
+
+[![Star History Chart](https://star-history.dera.page/svg?repos=pangxiaobin/MarkCardStudio)](https://star-history.dera.page/#pangxiaobin/MarkCardStudio)
