@@ -1,5 +1,21 @@
 # Changelog / 变更日志
 
+## [v0.1.5] - 2026-08-30
+
+### 功能与修复 / Features & Fixes
+
+- **编辑器格式工具栏**：新增 Markdown 编辑器双排快捷工具栏，支持标题、加粗/斜体/划线、代码块、列表、表格、表情、提示块与图表的一键插入，搭配无缝原生 Tooltip。
+- **ECharts 数据图表支持**：原生支持在 Markdown 中使用 ````echarts` 代码块嵌入柱状图、折线图、饼图等丰富图表，支持标准 JSON 与 JS 对象语法，自适应卡片主题并支持无损高清导出。
+- **修复 Windows 滤镜遮挡 Bug**：修复 Windows 系统（WebView2）下卡片主题中 `backdrop-filter` 导致的文字与元素被图层遮盖异常的问题。
+
+---
+
+- **Markdown Editor Toolbar**: Added a dual-row formatting toolbar for quick insertion of headings, inline styles, code blocks, lists, tables, emojis, callouts, and charts with native tooltips.
+- **ECharts Data Visualizations**: Native Markdown support for rendering bar, line, pie, and other charts with standard JSON and JS object syntax, card theme adaptation, and lossless export.
+- **Windows Filter Occlusion Fix**: Fixed an issue where `backdrop-filter` on card themes caused text and elements to be covered/blanked on Windows (WebView2).
+
+---
+
 ## [v0.1.4] - 2026-08-25
 
 ### 图片、HTML 与导出修复 / Image, HTML & Export Fixes
