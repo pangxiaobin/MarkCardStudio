@@ -27,7 +27,7 @@ MarkCard Studio is a local-first desktop authoring tool for content creators and
 - **Automatic pagination**: split by `##`, by `##` and `###`, by a custom delimiter, by character count, or with adaptive smart pagination.
 - **16 built-in themes**: styles range from Swiss Grid and Bauhaus to Apple Notes, newspaper, cyberpunk, Y2K, blueprint, and Riso-inspired layouts.
 - **Publishing presets**: Xiaohongshu (3:4), Douyin (9:16), Weibo (6:7), square (1:1), and fully custom dimensions.
-- **Rich Markdown rendering**: headings, lists, task lists, tables, blockquotes, callouts, images, highlighted code, KaTeX formulas, Mermaid diagrams, footnotes, emoji, and inline emphasis.
+- **Rich Markdown rendering**: headings, lists, task lists, tables, blockquotes, callouts, images, highlighted code, KaTeX formulas, Mermaid diagrams, interactive ECharts charts, footnotes, emoji, and inline emphasis.
 - **Flexible art direction**: solid colors, gradients, patterns, bundled wallpapers, custom background images, transparent output, and editable header/footer metadata.
 - **Multi-format export**: export all pages as PNG or JPG, generate a multipage PDF, or combine the document into one long PNG. Output is grouped into a document-specific folder.
 - **Local document support**: open and save Markdown files through native dialogs, resolve relative local images, persist settings, and recover unsaved drafts.
@@ -53,8 +53,8 @@ The files in [`imgs/EN`](imgs/EN) are real card exports produced by MarkCard Stu
   </tr>
   <tr>
     <td><img src="imgs/EN/markcard-page-7.webp" alt="MarkCard example page 7" /></td>
-    <td></td>
-    <td></td>
+    <td><img src="imgs/EN/markcard-page-8.webp" alt="MarkCard example page 8" /></td>
+    <td><img src="imgs/EN/markcard-page-9.webp" alt="MarkCard example page 9" /></td>
   </tr>
 </table>
 
@@ -67,9 +67,86 @@ The files in [`imgs/EN`](imgs/EN) are real card exports produced by MarkCard Stu
 | Styling | Tailwind CSS 4, DaisyUI, theme-specific CSS |
 | Editor | CodeMirror 6 |
 | Markdown | markdown-it and plugins |
-| Rich content | Highlight.js, KaTeX, Mermaid |
+| Rich content | Highlight.js, KaTeX, Mermaid, ECharts |
 | Export | html-to-image, jsPDF |
 | Icons | Lucide |
+
+## Charts & Data Visualizations (ECharts)
+
+MarkCard Studio natively supports interactive and static **ECharts** diagrams directly in Markdown via ````echarts` code blocks. Charts automatically adapt to card themes and dark mode, respect compact vertical spacing, and export sharply to high-resolution PNG, JPG, and PDF without rasterization clipping.
+
+### 1. Basic Syntax
+
+Write an `echarts` code block using either **JSON format** or **JavaScript Object format**:
+
+#### Format A: Standard JSON
+Strict JSON syntax with double-quoted keys. Great for structured data, API responses, and AI-generated content:
+
+```markdown
+```echarts
+{
+  "title": { "text": "Quarterly Revenue" },
+  "xAxis": {
+    "data": ["Q1", "Q2", "Q3", "Q4"]
+  },
+  "yAxis": { "type": "value" },
+  "series": [{
+    "type": "bar",
+    "data": [320, 500, 680, 890]
+  }]
+}
+```
+```
+
+#### Format B: JavaScript Object (Natural & Concise)
+Standard JavaScript object syntax with unquoted keys, single quotes, trailing commas, and optional comments:
+
+```markdown
+```echarts
+{
+  title: { text: 'Quarterly Revenue' },
+  xAxis: {
+    data: ['Q1', 'Q2', 'Q3', 'Q4']
+  },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'bar',
+    data: [320, 500, 680, 890]
+  }]
+}
+```
+```
+
+### 2. Customizing Chart Height
+
+MarkCard Studio automatically infers optimal chart heights based on chart complexity. If you want to explicitly specify a fixed pixel height, two main syntax formats are supported on the code fence:
+
+1. **Direct number (Concise)**:
+   ```markdown
+   ```echarts 260
+   { ... }
+   ```
+   ```
+   *(Also accepts ````echarts 260px`)*
+
+2. **Attribute assignment (`height=...` or `h=...`)**:
+   ```markdown
+   ```echarts height=260
+   { ... }
+   ```
+   ```
+   *(Also accepts ````echarts h=260` or ````echarts height:260`)*
+
+> 💡 **Tip**: You can also specify height inside the code block via a leading comment (e.g. `// height: 260`) or directly as an Option property (`{ "height": 260, ... }`). Height values are safely bounded between 120px and 600px.
+
+### 3. Supported Chart Types
+
+- **Bar Charts (`bar`)**: Category comparisons, quarterly results, horizontal ranking bars.
+- **Line Charts (`line`)**: Time series trends, smoothed metrics, area curves.
+- **Pie & Donut Charts (`pie`)**: Channel distribution and composition breakdown with outer label clipping prevention and symmetric centering.
+- **Radar, Heatmaps & More**: Supports all standard ECharts coordinate systems.
+
+> 💡 **Quick Insertion**: Click the **📊 Insert Chart** button in the editor toolbar to open a dropdown menu and insert ready-to-use bar, line, or pie templates with built-in syntax tips.
 
 ## Getting Started
 
