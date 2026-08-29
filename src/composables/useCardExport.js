@@ -3,7 +3,8 @@ import { getFontEmbedCSS, toCanvas } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { createApp, nextTick } from "vue";
 import CardArtwork from "../components/preview/CardArtwork.vue";
-import { renderMermaidDiagrams } from "./useContentParser.js";
+import { renderMermaidDiagrams, renderEChartsDiagrams } from "./useContentParser.js";
+import * as echarts from "echarts";
 import { i18n } from "../i18n/index.js";
 
 function t(key, params) {
@@ -416,6 +417,7 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     }
     await nextTick();
     await renderMermaidDiagrams(posterNode);
+    await renderEChartsDiagrams(posterNode);
     if (document.fonts?.ready) {
       await document.fonts.ready;
     }
@@ -428,6 +430,7 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
       customFontFamily,
       customFontEmbedCss,
     );
+    await rasterizeEChartsForExport(posterNode);
     // Inline images before cloning the node. html-to-image needs to fetch image
     // sources again while cloning; that second fetch is unreliable in the
     // Tauri WebView (especially for remote URLs) and can result in a blank
@@ -471,6 +474,7 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     const canvas = await toCanvas(posterNode, captureOptions);
     compositeContentImages(canvas, posterNode);
     compositeCoverStickers(canvas, posterNode);
+    compositeEChartsImages(canvas, posterNode);
     exportApp.unmount();
     container.remove();
     return canvas;
@@ -533,6 +537,46 @@ async function rasterizeMathForExport(root) {
   }
 
   return fontEmbedCSS;
+}
+
+/** Rasterize ECharts diagrams while DOM and canvas are fully initialized. */
+async function rasterizeEChartsForExport(root) {
+  const nodes = Array.from(root.querySelectorAll(".echarts-render-container"));
+  for (const node of nodes) {
+    const chart = echarts.getInstanceByDom(node) || node._echartsInstance;
+    if (!chart) continue;
+
+    try {
+      chart.getZr?.()?.flush?.();
+
+      const dataUrl = chart.getDataURL({
+        type: "png",
+        pixelRatio: 2,
+        backgroundColor: "transparent",
+        excludeComponents: ["toolbox"],
+      });
+      if (dataUrl) {
+        const rect = node.getBoundingClientRect();
+        const width = Math.ceil(rect.width) || node.clientWidth || 360;
+        const height = Math.ceil(rect.height) || node.clientHeight || 160;
+        const image = document.createElement("img");
+        image.src = dataUrl;
+        image.alt = "ECharts Diagram";
+        image.className = "echarts-export-image";
+        image.width = width;
+        image.height = height;
+        image.style.width = `${width}px`;
+        image.style.height = `${height}px`;
+        image.style.display = "block";
+        image.style.objectFit = "contain";
+        chart.dispose();
+        node._echartsInstance = null;
+        node.replaceWith(image);
+      }
+    } catch (error) {
+      console.warn("Failed to rasterize ECharts diagram for export", error);
+    }
+  }
 }
 
 /** Rasterize Mermaid while it still has access to the live DOM font and color context. */
@@ -862,6 +906,29 @@ function compositeCoverStickers(canvas, root) {
       context.filter = computed.filter;
     }
     context.drawImage(sticker, drawX, drawY, drawWidth, drawHeight);
+    context.restore();
+  }
+}
+
+function compositeEChartsImages(canvas, root) {
+  const context = canvas.getContext("2d");
+  const rootRect = root.getBoundingClientRect();
+  if (!context || rootRect.width <= 0 || rootRect.height <= 0) return;
+
+  const scaleX = canvas.width / rootRect.width;
+  const scaleY = canvas.height / rootRect.height;
+  for (const image of root.querySelectorAll("img.echarts-export-image")) {
+    if (!image.complete || image.naturalWidth <= 0) continue;
+
+    const rect = image.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    const x = (rect.left - rootRect.left) * scaleX;
+    const y = (rect.top - rootRect.top) * scaleY;
+    const width = rect.width * scaleX;
+    const height = rect.height * scaleY;
+
+    context.save();
+    context.drawImage(image, x, y, width, height);
     context.restore();
   }
 }

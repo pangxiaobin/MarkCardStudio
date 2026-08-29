@@ -221,6 +221,7 @@ export default {
     image: "Image",
     math: "Math formula",
     mermaid: "Mermaid diagram",
+    echarts: "ECharts chart",
     overflowWarning: "This block cannot fit on the card. Adjust the content or canvas ratio.",
   },
   publish: {

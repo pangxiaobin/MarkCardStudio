@@ -1,11 +1,13 @@
 <script setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   getCardLayoutClass,
   parseBlocks,
   renderBlocksToHtml,
   renderMermaidDiagrams,
+  renderEChartsDiagrams,
+  disposeEChartsDiagrams,
 } from "../../composables/useContentParser.js";
 import { getCoverStickers } from "../../config/coverStickers.js";
 
@@ -151,6 +153,7 @@ async function prepareContent() {
   await nextTick();
   if (!canvasElement.value || version !== prepareVersion) return;
   await renderMermaidDiagrams(canvasElement.value);
+  await renderEChartsDiagrams(canvasElement.value);
   if (document.fonts?.ready) await document.fonts.ready;
   await Promise.all(Array.from(canvasElement.value.querySelectorAll("img")).map(waitForImage));
   if (version !== prepareVersion) return;
@@ -185,6 +188,10 @@ watch(
   },
   { immediate: true, deep: true },
 );
+
+onBeforeUnmount(() => {
+  disposeEChartsDiagrams(canvasElement.value);
+});
 
 defineExpose({
   getCanvasElement: () => canvasElement.value,

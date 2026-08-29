@@ -22,6 +22,7 @@ import langCpp from "highlight.js/lib/languages/cpp";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import mermaid from "mermaid";
+import * as echarts from "echarts";
 import MarkdownIt from "markdown-it";
 import markdownItContainer from "markdown-it-container";
 import markdownItFootnote from "markdown-it-footnote";
@@ -528,6 +529,34 @@ function parseHtmlBlockContent(source) {
   return { type: "html", content: parts.join(""), images };
 }
 
+/**
+ * Extracts custom height specified on the first line (fence info or raw code)
+ */
+export function extractEChartsCustomHeight(info, raw) {
+  if (info) {
+    // Matches: height=350, height:350, h=350, h:350
+    const explicitMatch = info.match(/\b(?:height|h)\s*[=:]\s*(\d+)/i);
+    if (explicitMatch) return Number.parseInt(explicitMatch[1], 10);
+
+    // Matches: ```echarts 350, ```echarts:350, ```echarts 350px, ```echarts-350
+    const standaloneMatch = info.match(/^echarts?[:=\-_]?\s*(\d{2,4})(?:px)?\b/i);
+    if (standaloneMatch) return Number.parseInt(standaloneMatch[1], 10);
+  }
+
+  if (raw) {
+    // Matches first line inside the code block: // height: 350, height: 350, # height: 350
+    const firstLine = raw.trim().split("\n")[0] || "";
+    const firstLineMatch = firstLine.match(/^(?:\/\/\s*|#\s*|\/\*\s*)?(?:height|h)\s*[=:]\s*(\d+)/i);
+    if (firstLineMatch) return Number.parseInt(firstLineMatch[1], 10);
+
+    // Matches JSON config: "height": 350
+    const jsonMatch = raw.match(/"height"\s*:\s*(\d+)/);
+    if (jsonMatch) return Number.parseInt(jsonMatch[1], 10);
+  }
+
+  return null;
+}
+
 export function parseBlocks(input) {
   const source = Array.isArray(input) ? input.join("\n") : String(input ?? "");
   const tokens = markdownParser.parse(source, {});
@@ -537,13 +566,21 @@ export function parseBlocks(input) {
     const token = tokens[index];
 
     if (token.type === "fence" || token.type === "code_block") {
-      const lang = token.info?.trim().split(/\s+/)[0] || "";
+      const info = (token.info || "").trim();
+      const firstWord = info.split(/\s+/)[0]?.toLowerCase() || "";
       const raw = token.content.replace(/\n$/, "");
-      blocks.push(
-        ["mermaid", "diagram"].includes(lang.toLowerCase())
-          ? { type: "mermaid", raw }
-          : { type: "code-block", lang, lines: raw.split("\n"), raw },
-      );
+
+      if (["mermaid", "diagram"].includes(firstWord)) {
+        blocks.push({ type: "mermaid", raw });
+      } else if (
+        ["echarts", "echart"].includes(firstWord)
+        || /^echarts?[:=\-_]/i.test(firstWord)
+      ) {
+        const customHeight = extractEChartsCustomHeight(info, raw);
+        blocks.push({ type: "echarts", raw, customHeight });
+      } else {
+        blocks.push({ type: "code-block", lang: firstWord, lines: raw.split("\n"), raw });
+      }
       continue;
     }
 
@@ -665,6 +702,7 @@ export function blocksToPreviewText(blocks) {
       if (b.type === "blockquote") return b.content;
       if (b.type === "code-block") return `[${b.lang || t("content.code")}]`;
       if (b.type === "mermaid") return `[${t("content.flowchart")}]`;
+      if (b.type === "echarts") return `[${t("content.echarts") || "ECharts 图表"}]`;
       if (b.type === "table") return `[${t("content.table")}]`;
       if (b.type === "image") return `[${t("content.image")}]`;
       if (b.type === "html") return String(b.content || "").replace(/<[^>]+>/g, "").trim();
@@ -674,6 +712,79 @@ export function blocksToPreviewText(blocks) {
 }
 
 // ─── Block → HTML ─────────────────────────────────────────────────────────────
+/**
+ * Intelligently infer optimal chart height based on chart type, data volume, and layout
+ */
+export function inferEChartsHeight(option, customHeight = null) {
+  if (customHeight && Number.isFinite(customHeight) && customHeight > 0) {
+    return Math.max(120, Math.min(600, customHeight));
+  }
+
+  if (!option || typeof option !== "object") return 200;
+
+  if (option.height && Number.isFinite(Number(option.height))) {
+    return Math.max(120, Math.min(600, Number(option.height)));
+  }
+
+  const series = Array.isArray(option.series) ? option.series : option.series ? [option.series] : [];
+  const hasTitle = Boolean(option.title && (option.title.text || typeof option.title === "string"));
+  const hasSubtitle = Boolean(option.title && option.title.subtext);
+  const hasLegend = Boolean(option.legend && (Array.isArray(option.legend) || option.legend.data || Object.keys(option.legend).length > 0));
+  const isVerticalLegend = option.legend?.orient === "vertical";
+
+  // 1. Horizontal Bar Chart (yAxis has categories)
+  const yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis;
+  const isHorizontalBar = yAxis?.type === "category" || Array.isArray(yAxis?.data);
+  if (isHorizontalBar) {
+    const categoryCount = yAxis?.data?.length || series[0]?.data?.length || 5;
+    const calculated = categoryCount * 26 + (hasTitle ? (hasSubtitle ? 85 : 70) : 45);
+    return Math.max(180, Math.min(480, calculated));
+  }
+
+  // 2. Radar, Sankey, Heatmap, Graph, Treemap (Need deep area)
+  const isDeepChart = Boolean(
+    option.radar
+    || series.some((s) => ["radar", "sankey", "heatmap", "graph", "treemap", "sunburst"].includes(s?.type))
+  );
+  if (isDeepChart) {
+    return hasTitle ? (hasSubtitle ? 320 : 290) : 260;
+  }
+
+  // 3. Pie / Donut Chart
+  const isPie = series.some((s) => s?.type === "pie");
+  if (isPie) {
+    const sliceCount = series[0]?.data?.length || 0;
+    if (isVerticalLegend || sliceCount >= 8) {
+      return hasTitle ? 290 : 260;
+    }
+    if (sliceCount >= 5 || hasTitle) {
+      return hasTitle ? 240 : 210;
+    }
+    return 180;
+  }
+
+  // 4. Cartesian (Line, Column/Vertical Bar, Area, Scatter)
+  const xAxis = Array.isArray(option.xAxis) ? option.xAxis[0] : option.xAxis;
+  const xCount = xAxis?.data?.length || series[0]?.data?.length || 0;
+  const isMultiSeries = series.length >= 3;
+
+  if (xCount > 15 || isMultiSeries || option.dataZoom) {
+    return hasTitle ? 270 : 230;
+  }
+  if (hasTitle && (hasSubtitle || hasLegend)) {
+    return 260;
+  }
+  if (hasTitle) {
+    return 230;
+  }
+  if (hasLegend || xCount > 8) {
+    return 190;
+  }
+
+  // 5. Minimal simple line/bar chart (e.g. 5-7 day trend, no title, no legend)
+  return 160;
+}
+
 export function renderBlockToHtml(block) {
   switch (block.type) {
     case "heading2":
@@ -692,6 +803,15 @@ export function renderBlockToHtml(block) {
 
     case "mermaid": {
       return `<div class="mermaid-raw-box my-2.5 flex justify-center items-center overflow-hidden p-2 bg-slate-50/70 dark:bg-slate-900/70 rounded-xl border border-slate-200/80 dark:border-slate-800"><div class="mermaid-raw" data-code="${escapeHtml(block.raw)}">${escapeHtml(block.raw)}</div></div>`;
+    }
+
+    case "echarts": {
+      let option = null;
+      try {
+        option = parseEChartsOption(block.raw);
+      } catch (_) {}
+      const height = inferEChartsHeight(option, block.customHeight);
+      return `<div class="echarts-raw-box w-full flex flex-col justify-center items-center overflow-hidden" style="margin: 0;"><div class="echarts-render-container w-full" style="width: 100%; height: ${height}px;" data-height="${height}" data-code="${escapeHtml(block.raw)}"></div></div>`;
     }
 
     case "html": {
@@ -864,3 +984,188 @@ function fitMermaidSvg(wrapper) {
   svg.style.display = "block";
   wrapper.style.overflow = "hidden";
 }
+
+/**
+ * Parses ECharts configuration safely supporting standard JSON and relaxed JS object literal
+ */
+export function parseEChartsOption(code) {
+  if (!code || !code.trim()) return null;
+  let trimmed = code.trim();
+  // Strip leading single-line comment if present (e.g. "// height: 350")
+  trimmed = trimmed.replace(/^(?:\/\/[^\n]*|\#[^\n]*|\/\*[\s\S]*?\*\/)\s*/, "").trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    try {
+      const fn = new Function(`"use strict"; return (${trimmed});`);
+      const result = fn();
+      if (result && typeof result === "object") return result;
+    } catch (evalErr) {
+      throw new Error(`配置语法解析错误: ${e.message || evalErr.message}`);
+    }
+  }
+  return null;
+}
+
+/**
+ * Optimizes ECharts options to eliminate wasteful canvas margins and fit card typography
+ */
+function applyDefaultEChartsOption(option) {
+  if (!option || typeof option !== "object") return option;
+
+  const hasCartesian = Boolean(
+    option.xAxis
+    || option.yAxis
+    || (Array.isArray(option.series) && option.series.some((s) => ["line", "bar", "scatter", "candlestick"].includes(s?.type)))
+  );
+
+  const hasTitle = Boolean(
+    option.title && (option.title.text || typeof option.title === "string")
+  );
+  const hasSubtitle = Boolean(option.title && option.title.subtext);
+  const hasLegend = Boolean(
+    option.legend && (Array.isArray(option.legend) || option.legend.data || Object.keys(option.legend).length > 0)
+  );
+  const series = Array.isArray(option.series) ? option.series : option.series ? [option.series] : [];
+  const isPie = series.some((s) => s?.type === "pie");
+  const isVerticalLegend = option.legend?.orient === "vertical";
+
+  let gridTop = 10;
+  if (hasTitle && (hasSubtitle || hasLegend)) {
+    gridTop = 68;
+  } else if (hasTitle) {
+    gridTop = 52;
+  } else if (hasLegend) {
+    gridTop = 32;
+  }
+
+  const merged = {
+    backgroundColor: "transparent",
+    animation: false,
+    ...option,
+  };
+
+  // If chart is a Pie chart, optimize label lines and radius while keeping it strictly horizontally centered
+  if (isPie) {
+    merged.series = series.map((s) => {
+      if (s?.type !== "pie") return s;
+      const updated = { ...s };
+
+      // 1. Shorten labelLine lengths to prevent labels from overflowing the card container
+      updated.labelLine = {
+        length: 5,
+        length2: 6,
+        smooth: true,
+        ...s.labelLine,
+      };
+
+      // 2. Ensure labels use tight margins
+      updated.label = {
+        bleedMargin: 4,
+        alignTo: "none",
+        fontSize: 11,
+        ...s.label,
+      };
+
+      // 3. Keep pie strictly horizontally centered at 50%
+      const currentCenter = Array.isArray(s.center) ? [...s.center] : ["50%", "50%"];
+      currentCenter[0] = "50%";
+      updated.center = currentCenter;
+
+      // 4. If outside labels are used, scale radius to 38% so it stays completely centered without clipping
+      const labelPos = s.label?.position || "outside";
+      if (labelPos !== "inside" && labelPos !== "inner") {
+        if (typeof s.radius === "string") {
+          const radVal = Number.parseFloat(s.radius);
+          if (radVal >= 45) updated.radius = "38%";
+        } else if (Array.isArray(s.radius) && typeof s.radius[1] === "string") {
+          const outerVal = Number.parseFloat(s.radius[1]);
+          if (outerVal >= 45) updated.radius = [s.radius[0], "38%"];
+        }
+      }
+
+      return updated;
+    });
+  }
+
+  // If chart uses Cartesian grid and user did not customize grid, provide tight, label-aware bounds
+  if (hasCartesian && !option.grid) {
+    merged.grid = {
+      top: gridTop,
+      bottom: 8,
+      left: 8,
+      right: 12,
+      containLabel: true,
+    };
+  } else if (option.grid && typeof option.grid === "object") {
+    merged.grid = {
+      containLabel: true,
+      ...option.grid,
+    };
+  }
+
+  return merged;
+}
+
+/**
+ * Asynchronous ECharts renderer for DOM containers
+ */
+export async function renderEChartsDiagrams(container) {
+  if (!container) return;
+  const rawNodes = Array.from(container.querySelectorAll(".echarts-render-container"));
+  for (const node of rawNodes) {
+    const rawCode = node.getAttribute("data-code");
+    if (!rawCode || node.getAttribute("data-rendered") === "true") continue;
+
+    try {
+      const option = parseEChartsOption(rawCode);
+      if (!option) continue;
+
+      let chart = echarts.getInstanceByDom(node);
+
+      const parentWidth = node.clientWidth || node.parentElement?.clientWidth || container?.clientWidth || 360;
+      const width = Math.max(200, parentWidth > 40 ? parentWidth - 16 : parentWidth);
+      const height = Number.parseInt(node.getAttribute("data-height") || "160", 10) || 160;
+
+      if (!chart) {
+        chart = echarts.init(node, null, {
+          renderer: "canvas",
+          width,
+          height,
+        });
+        node._echartsInstance = chart;
+      } else {
+        chart.resize({ width, height });
+      }
+
+      const finalOption = applyDefaultEChartsOption(option);
+      chart.setOption(finalOption, true);
+
+      // Force synchronous flush to paint canvas immediately
+      chart.getZr?.()?.flush?.();
+
+      node.setAttribute("data-rendered", "true");
+    } catch (err) {
+      console.warn("ECharts render error:", err);
+      node.innerHTML = `<div class="p-3 text-xs text-rose-500 bg-rose-50/80 dark:bg-rose-950/30 rounded-lg border border-rose-200 dark:border-rose-900/50 w-full text-center">ECharts 语法解析错误: ${escapeHtml(err.message)}</div>`;
+      node.style.height = "auto";
+      node.setAttribute("data-rendered", "error");
+    }
+  }
+}
+
+/**
+ * Dispose all ECharts instances in a container to avoid leaks
+ */
+export function disposeEChartsDiagrams(container) {
+  if (!container) return;
+  const rawNodes = Array.from(container.querySelectorAll(".echarts-render-container"));
+  for (const node of rawNodes) {
+    const chart = echarts.getInstanceByDom(node) || node._echartsInstance;
+    if (chart && !chart.isDisposed()) {
+      chart.dispose();
+    }
+    node._echartsInstance = null;
+  }
+}
+

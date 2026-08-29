@@ -221,6 +221,7 @@ export default {
     image: "图片",
     math: "数学公式",
     mermaid: "Mermaid 图表",
+    echarts: "ECharts 图表",
     overflowWarning: "该内容块无法完整放入当前卡片，请调整内容或画布比例",
   },
   publish: {

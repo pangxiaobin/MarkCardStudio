@@ -1,7 +1,7 @@
 import { createApp, h, nextTick, reactive } from "vue";
 import CardArtwork from "../components/preview/CardArtwork.vue";
 import { i18n } from "../i18n/index.js";
-import { renderMermaidDiagrams } from "./useContentParser.js";
+import { renderMermaidDiagrams, renderEChartsDiagrams } from "./useContentParser.js";
 
 const MAX_MEASUREMENT_CACHE_ENTRIES = 600;
 const measurementCache = new Map();
@@ -216,6 +216,7 @@ function createMeasurementHost(options) {
     const poster = host.querySelector(".poster-canvas-frame");
     if (!poster) return false;
     await raceWithAbort(renderMermaidDiagrams(poster), options.signal);
+    await raceWithAbort(renderEChartsDiagrams(poster), options.signal);
     if (document.fonts?.ready) await raceWithAbort(document.fonts.ready, options.signal);
     const imageResults = await Promise.all(
       Array.from(poster.querySelectorAll("img")).map((image) => waitForImage(image, options.signal)),

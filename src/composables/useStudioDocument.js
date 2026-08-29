@@ -92,7 +92,50 @@ graph TD
 - **加粗醒目标题** 与 *优雅斜体强调*
 - 化学分子式 $H_2O$ 与 下标 $X_1$ / 上标 $X^2$
 - 快捷键提示：按 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 撤销编辑
-- 脚注注释引用 [^1] 方便写论文与严肃干货文章`;
+- 脚注注释引用 [^1] 方便写论文与严肃干货文章
+
+## 📈 ECharts 数据图表呈现
+
+### 柱状图：季度销售业绩
+\`\`\`echarts
+{
+  "title": {
+    "text": "季度销售业绩统计"
+  },
+  "xAxis": {
+    "data": ["第一季度", "第二季度", "第三季度", "第四季度"]
+  },
+  "yAxis": {
+    "type": "value"
+  },
+  "series": [{
+    "type": "bar",
+    "data": [320, 500, 680, 890]
+  }]
+}
+\`\`\`
+
+### 饼图：访问渠道来源分布
+\`\`\`echarts
+{
+  "title": {
+    "text": "访问来源统计",
+    "left": "center"
+  },
+  "series": [{
+    "name": "访问来源",
+    "type": "pie",
+    "data": [
+      { "value": 1048, "name": "搜索引擎" },
+      { "value": 735, "name": "直接访问" },
+      { "value": 580, "name": "推荐渠道" },
+      { "value": 484, "name": "社交媒体" },
+      { "value": 300, "name": "其他" }
+    ]
+  }]
+}
+\`\`\`
+`;
 
 const defaultMarkdownEnglish = `# Welcome to MarkCard Studio
 
@@ -143,6 +186,48 @@ graph LR
 ::: tip Writing tip
 Use headings to create clear card boundaries.
 :::
+
+## 📈 ECharts Data Visualizations
+
+### Bar Chart: Quarterly Revenue
+\`\`\`echarts
+{
+  "title": {
+    "text": "Quarterly Revenue"
+  },
+  "xAxis": {
+    "data": ["Q1", "Q2", "Q3", "Q4"]
+  },
+  "yAxis": {
+    "type": "value"
+  },
+  "series": [{
+    "type": "bar",
+    "data": [320, 500, 680, 890]
+  }]
+}
+\`\`\`
+
+### Pie Chart: Traffic Distribution
+\`\`\`echarts
+{
+  "title": {
+    "text": "Traffic Distribution",
+    "left": "center"
+  },
+  "series": [{
+    "name": "Traffic",
+    "type": "pie",
+    "data": [
+      { "value": 1048, "name": "Search" },
+      { "value": 735, "name": "Direct" },
+      { "value": 580, "name": "Referral" },
+      { "value": 484, "name": "Social" },
+      { "value": 300, "name": "Others" }
+    ]
+  }]
+}
+\`\`\`
 
 > Turn today's idea into something ready to share.`;
 
