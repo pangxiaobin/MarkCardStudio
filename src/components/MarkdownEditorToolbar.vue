@@ -25,6 +25,12 @@ const calloutTypes = [
   { id: "note", labelKey: "editor.floatingToolbar.calloutNote", bg: "bg-blue-500" },
 ];
 
+const chartOptions = [
+  { id: "bar", icon: "bar-chart", labelKey: "editor.floatingToolbar.chartBar", descKey: "editor.floatingToolbar.chartBarDesc" },
+  { id: "line", icon: "chart-line", labelKey: "editor.floatingToolbar.chartLine", descKey: "editor.floatingToolbar.chartLineDesc" },
+  { id: "pie", icon: "chart-pie", labelKey: "editor.floatingToolbar.chartPie", descKey: "editor.floatingToolbar.chartPieDesc" },
+];
+
 const emojiGroups = [
   {
     titleKey: "editor.floatingToolbar.emojiPopular",
@@ -69,6 +75,9 @@ function toggleDropdown(name, event) {
 
     if (name === "callout") {
       const menuWidth = 150;
+      left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left));
+    } else if (name === "chart") {
+      const menuWidth = 270;
       left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left));
     } else if (name === "emoji") {
       const menuWidth = 246;
@@ -133,13 +142,14 @@ onBeforeUnmount(() => {
     @mousedown.prevent
   >
     <!-- Row 1: Rich Formatting Toolbar -->
-    <div class="flex h-9 items-center gap-0.5 px-2.5 border-b border-slate-100 dark:border-slate-800/60">
+    <div class="relative z-20 flex h-9 items-center gap-0.5 px-2.5 border-b border-slate-100 dark:border-slate-800/60">
       <!-- 1. Heading Dropdown Trigger -->
       <button
         type="button"
-        class="tool-btn px-1.5 w-auto gap-0.5"
+        class="tool-btn tooltip tooltip-bottom tooltip-start px-1.5 w-auto gap-0.5"
         :class="{ 'bg-slate-200/80 dark:bg-slate-700': activeDropdown === 'heading' }"
-        :title="t('editor.floatingToolbar.heading')"
+        :data-tip="t('editor.floatingToolbar.heading')"
+        :aria-label="t('editor.floatingToolbar.heading')"
         @click="toggleDropdown('heading', $event)"
       >
         <span class="text-[13px] font-semibold font-sans tracking-tight leading-none">H</span>
@@ -156,8 +166,9 @@ onBeforeUnmount(() => {
       <!-- Bold -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.bold')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.bold')"
+        :aria-label="t('editor.floatingToolbar.bold')"
         @click="handleAction('bold')"
       >
         <span class="text-[14px] font-bold font-serif leading-none">B</span>
@@ -166,8 +177,9 @@ onBeforeUnmount(() => {
       <!-- Italic -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.italic')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.italic')"
+        :aria-label="t('editor.floatingToolbar.italic')"
         @click="handleAction('italic')"
       >
         <span class="text-[14px] italic font-serif leading-none">I</span>
@@ -176,8 +188,9 @@ onBeforeUnmount(() => {
       <!-- Strikethrough -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.strikethrough')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.strikethrough')"
+        :aria-label="t('editor.floatingToolbar.strikethrough')"
         @click="handleAction('strikethrough')"
       >
         <span class="text-[14px] line-through font-serif leading-none">S</span>
@@ -186,8 +199,9 @@ onBeforeUnmount(() => {
       <!-- Underline -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.underline')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.underline')"
+        :aria-label="t('editor.floatingToolbar.underline')"
         @click="handleAction('underline')"
       >
         <span class="text-[14px] underline font-serif leading-none">U</span>
@@ -196,8 +210,9 @@ onBeforeUnmount(() => {
       <!-- Highlighter -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.highlight')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.highlight')"
+        :aria-label="t('editor.floatingToolbar.highlight')"
         @click="handleAction('highlight')"
       >
         <AppIcon name="highlighter" :size="16" />
@@ -208,8 +223,9 @@ onBeforeUnmount(() => {
       <!-- Link -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.link')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.link')"
+        :aria-label="t('editor.floatingToolbar.link')"
         @click="handleAction('link')"
       >
         <AppIcon name="link" :size="16" />
@@ -218,8 +234,9 @@ onBeforeUnmount(() => {
       <!-- Image -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.image')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.image')"
+        :aria-label="t('editor.floatingToolbar.image')"
         @click="handleAction('image')"
       >
         <AppIcon name="image" :size="16" />
@@ -228,8 +245,9 @@ onBeforeUnmount(() => {
       <!-- Code (Inline) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.code')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.code')"
+        :aria-label="t('editor.floatingToolbar.code')"
         @click="handleAction('code')"
       >
         <AppIcon name="code" :size="16" />
@@ -238,8 +256,9 @@ onBeforeUnmount(() => {
       <!-- Code Block -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.codeBlock')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.codeBlock')"
+        :aria-label="t('editor.floatingToolbar.codeBlock')"
         @click="handleAction('code-block')"
       >
         <AppIcon name="square-code" :size="16" />
@@ -248,8 +267,9 @@ onBeforeUnmount(() => {
       <!-- Quote -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.quote')"
+        class="tool-btn tooltip tooltip-bottom tooltip-end"
+        :data-tip="t('editor.floatingToolbar.quote')"
+        :aria-label="t('editor.floatingToolbar.quote')"
         @click="handleAction('quote')"
       >
         <AppIcon name="quote" :size="16" />
@@ -257,12 +277,13 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Row 2: Secondary Tools -->
-    <div class="flex h-9 items-center gap-1 px-2.5">
+    <div class="relative z-10 flex h-9 items-center gap-1 px-2.5">
       <!-- 1. Bullet List (无序列表) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.list')"
+        class="tool-btn tooltip tooltip-bottom tooltip-start"
+        :data-tip="t('editor.floatingToolbar.list')"
+        :aria-label="t('editor.floatingToolbar.list')"
         @click="handleAction('list')"
       >
         <AppIcon name="list" :size="16" />
@@ -271,8 +292,9 @@ onBeforeUnmount(() => {
       <!-- 2. Numbered List (有序列表) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.listOrdered')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.listOrdered')"
+        :aria-label="t('editor.floatingToolbar.listOrdered')"
         @click="handleAction('list-ordered')"
       >
         <AppIcon name="list-ordered" :size="16" />
@@ -281,8 +303,9 @@ onBeforeUnmount(() => {
       <!-- 2. Horizontal Divider (分割线) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.divider')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.divider')"
+        :aria-label="t('editor.floatingToolbar.divider')"
         @click="handleAction('divider')"
       >
         <AppIcon name="minus" :size="16" />
@@ -291,8 +314,9 @@ onBeforeUnmount(() => {
       <!-- 3. Task List (待办列表) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.task')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.task')"
+        :aria-label="t('editor.floatingToolbar.task')"
         @click="handleAction('task')"
       >
         <AppIcon name="square" :size="15" />
@@ -301,9 +325,10 @@ onBeforeUnmount(() => {
       <!-- 4. Emoji Picker Trigger (插入表情) -->
       <button
         type="button"
-        class="tool-btn"
+        class="tool-btn tooltip tooltip-bottom"
         :class="{ 'bg-slate-200/80 dark:bg-slate-700': activeDropdown === 'emoji' }"
-        :title="t('editor.floatingToolbar.emoji')"
+        :data-tip="t('editor.floatingToolbar.emoji')"
+        :aria-label="t('editor.floatingToolbar.emoji')"
         @click="toggleDropdown('emoji', $event)"
       >
         <AppIcon name="smile" :size="17" />
@@ -312,19 +337,39 @@ onBeforeUnmount(() => {
       <!-- 5. Table (插入表格) -->
       <button
         type="button"
-        class="tool-btn"
-        :title="t('editor.floatingToolbar.table')"
+        class="tool-btn tooltip tooltip-bottom"
+        :data-tip="t('editor.floatingToolbar.table')"
+        :aria-label="t('editor.floatingToolbar.table')"
         @click="handleAction('table')"
       >
         <AppIcon name="table" :size="16" />
       </button>
 
-      <!-- 6. Callout (提示块) Dropdown Trigger -->
+      <!-- 6. Chart (插入图表) Dropdown Trigger -->
       <button
         type="button"
-        class="tool-btn px-1.5 w-auto gap-0.5"
+        class="tool-btn tooltip tooltip-bottom px-1.5 w-auto gap-0.5"
+        :class="{ 'bg-slate-200/80 dark:bg-slate-700': activeDropdown === 'chart' }"
+        :data-tip="t('editor.floatingToolbar.chart')"
+        :aria-label="t('editor.floatingToolbar.chart')"
+        @click="toggleDropdown('chart', $event)"
+      >
+        <AppIcon name="bar-chart" :size="16" />
+        <AppIcon
+          name="chevron-down"
+          :size="12"
+          class="text-slate-400 dark:text-slate-400 transition-transform duration-150"
+          :class="{ 'rotate-180': activeDropdown === 'chart' }"
+        />
+      </button>
+
+      <!-- 7. Callout (提示块) Dropdown Trigger -->
+      <button
+        type="button"
+        class="tool-btn tooltip tooltip-bottom tooltip-end px-1.5 w-auto gap-0.5"
         :class="{ 'bg-slate-200/80 dark:bg-slate-700': activeDropdown === 'callout' }"
-        :title="t('editor.floatingToolbar.callout')"
+        :data-tip="t('editor.floatingToolbar.callout')"
+        :aria-label="t('editor.floatingToolbar.callout')"
         @click="toggleDropdown('callout', $event)"
       >
         <AppIcon name="info" :size="16" />
@@ -406,6 +451,55 @@ onBeforeUnmount(() => {
         </div>
       </Transition>
 
+      <!-- Chart Dropdown Menu -->
+      <Transition
+        enter-active-class="transition duration-100 ease-out"
+        enter-from-class="opacity-0 scale-95 -translate-y-1"
+        enter-to-class="opacity-100 scale-100 translate-y-0"
+        leave-active-class="transition duration-75 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="activeDropdown === 'chart'"
+          ref="dropdownMenuRef"
+          class="fixed z-[9999] w-[270px] rounded-xl border border-slate-200/90 bg-white/98 p-2 shadow-2xl backdrop-blur-md dark:border-slate-700/90 dark:bg-slate-800/98 select-none text-slate-700 dark:text-slate-200 flex flex-col gap-1"
+          :style="{ top: `${dropdownPos.top}px`, left: `${dropdownPos.left}px` }"
+          @mousedown.prevent
+        >
+          <button
+            v-for="item in chartOptions"
+            :key="item.id"
+            type="button"
+            class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors group cursor-pointer"
+            @click="handleAction('chart', item.id)"
+          >
+            <div class="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <AppIcon :name="item.icon" :size="16" />
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="font-medium text-slate-800 dark:text-slate-100 text-xs">{{ t(item.labelKey) }}</span>
+              <span class="text-[11px] text-slate-400 dark:text-slate-400 truncate">{{ t(item.descKey) }}</span>
+            </div>
+          </button>
+
+          <div class="h-px bg-slate-100 dark:bg-slate-700/80 my-0.5"></div>
+
+          <!-- Syntax & Usage Tips -->
+          <div class="rounded-lg bg-slate-50 dark:bg-slate-900/60 p-2 border border-slate-100 dark:border-slate-700/50 flex flex-col gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+              <AppIcon name="sparkles" :size="12" class="text-amber-500" />
+              <span>{{ t('editor.floatingToolbar.chartTipsTitle') }}</span>
+            </div>
+            <ul class="space-y-0.5 pl-3 list-disc marker:text-slate-400 text-[10.5px] leading-relaxed">
+              <li>{{ t('editor.floatingToolbar.chartTip1') }}</li>
+              <li>{{ t('editor.floatingToolbar.chartTip2') }}</li>
+              <li>{{ t('editor.floatingToolbar.chartTip3') }}</li>
+            </ul>
+          </div>
+        </div>
+      </Transition>
+
       <!-- Emoji Picker Dropdown -->
       <Transition
         enter-active-class="transition duration-100 ease-out"
@@ -466,6 +560,25 @@ onBeforeUnmount(() => {
   transition-property: color, background-color, transform;
   transition-duration: 100ms;
   cursor: pointer;
+}
+
+/* DaisyUI Tooltip Integration & Polish */
+.tool-btn.tooltip {
+  display: inline-flex;
+}
+
+.tool-btn.tooltip:before {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  white-space: nowrap;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  z-index: 50;
+}
+
+.tool-btn.tooltip:after {
+  z-index: 50;
 }
 
 :global(.dark) .tool-btn {

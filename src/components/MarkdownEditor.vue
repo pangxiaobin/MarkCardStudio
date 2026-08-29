@@ -459,6 +459,64 @@ function applyFormat({ type, payload }) {
       }
       break;
     }
+    case "chart": {
+      const chartType = payload || "bar";
+      let chartCode = "";
+      if (chartType === "line") {
+        chartCode = `\`\`\`echarts 240
+// 💡 支持标准 ECharts 配置，首行数字（如 240）可自定义图表高度
+{
+  "title": { "text": "数据趋势走向" },
+  "xAxis": {
+    "data": ["1月", "2月", "3月", "4月", "5月", "6月"]
+  },
+  "yAxis": { "type": "value" },
+  "series": [{
+    "type": "line",
+    "smooth": true,
+    "data": [120, 200, 150, 260, 210, 310]
+  }]
+}
+\`\`\`\n`;
+      } else if (chartType === "pie") {
+        chartCode = `\`\`\`echarts 230
+// 💡 支持标准 ECharts 配置，首行数字（如 230）可自定义图表高度
+{
+  "title": { "text": "渠道来源统计", "left": "center" },
+  "series": [{
+    "name": "渠道",
+    "type": "pie",
+    "data": [
+      { "value": 1048, "name": "搜索引擎" },
+      { "value": 735, "name": "直接访问" },
+      { "value": 580, "name": "推荐渠道" },
+      { "value": 300, "name": "社交媒体" }
+    ]
+  }]
+}
+\`\`\`\n`;
+      } else {
+        chartCode = `\`\`\`echarts 240
+// 💡 支持标准 ECharts 配置，首行数字（如 240）可自定义图表高度
+{
+  "title": { "text": "数据统计对比" },
+  "xAxis": {
+    "data": ["第一季度", "第二季度", "第三季度", "第四季度"]
+  },
+  "yAxis": { "type": "value" },
+  "series": [{
+    "type": "bar",
+    "data": [320, 500, 680, 890]
+  }]
+}
+\`\`\`\n`;
+      }
+
+      replacement = `\n${chartCode}`;
+      selOffsetFrom = from + replacement.length;
+      selOffsetTo = selOffsetFrom;
+      break;
+    }
     case "emoji": {
       const emojiChar = payload || "💡";
       replacement = emojiChar;
