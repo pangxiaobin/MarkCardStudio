@@ -900,7 +900,7 @@ export function useStudioDocument() {
 
   watch(
     () => i18n.global.locale.value,
-    () => {
+    (newLocale, oldLocale) => {
       const defaultQuotes = ["zh-CN", "en-US"].map(
         (locale) => i18n.global.getLocaleMessage(locale)?.runtime?.defaultQuote,
       );
@@ -910,6 +910,26 @@ export function useStudioDocument() {
       if (["已开启", "On"].includes(autoSaveStatus.value)) {
         autoSaveStatus.value = t("runtime.autosaveEnabled");
       }
+
+      // 如果未绑定本地文件，切换系统语言时重置并初始化对应语言的默认案例；若已绑定本地文件则保持内容不变
+      if (!sourcePath.value && newLocale && newLocale !== oldLocale) {
+        const nextDefaultContent = newLocale === "zh-CN" ? defaultMarkdown : defaultMarkdownEnglish;
+        suppressDocumentWatchers = true;
+        markdownSource.value = nextDefaultContent;
+        savedContent.value = nextDefaultContent;
+        lastCommittedState = nextDefaultContent;
+        resetHistory(nextDefaultContent);
+        activePageIndex.value = 0;
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          // Ignore
+        }
+        nextTick(() => {
+          suppressDocumentWatchers = false;
+        });
+      }
+
       updatePagesNow();
     },
   );
