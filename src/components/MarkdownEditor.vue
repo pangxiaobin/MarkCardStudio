@@ -6,7 +6,7 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import AppIcon from "./AppIcon.vue";
-import AppIconButton from "./AppIconButton.vue";
+import MarkdownEditorToolbar from "./MarkdownEditorToolbar.vue";
 
 const props = defineProps({
   documentPath: {
@@ -143,6 +143,20 @@ function createEditor() {
               return true;
             },
           },
+          {
+            key: "Mod-b",
+            run: () => {
+              applyFormat({ type: "bold" });
+              return true;
+            },
+          },
+          {
+            key: "Mod-i",
+            run: () => {
+              applyFormat({ type: "italic" });
+              return true;
+            },
+          },
         ]),
         EditorView.lineWrapping,
         EditorView.updateListener.of((update) => {
@@ -154,6 +168,314 @@ function createEditor() {
       ],
     }),
   });
+}
+
+function applyFormat({ type, payload }) {
+  const view = editorView.value;
+  if (!view) return;
+
+  const { from, to } = view.state.selection.main;
+  const isCollapsed = from === to;
+  const selectedText = view.state.sliceDoc(from, to);
+
+  let replacement = "";
+  let selOffsetFrom = from;
+  let selOffsetTo = to;
+
+  switch (type) {
+    case "heading":
+    case "h1": {
+      const level = Number(payload) || 1;
+      const prefix = "#".repeat(level);
+      const titleMap = {
+        1: "一级标题",
+        2: "二级标题",
+        3: "三级标题",
+        4: "四级标题",
+      };
+      const placeholder = titleMap[level] || `${level}级标题`;
+      if (isCollapsed) {
+        replacement = `\n${prefix} ${placeholder}\n`;
+        selOffsetFrom = from + prefix.length + 2;
+        selOffsetTo = selOffsetFrom + placeholder.length;
+      } else {
+        replacement = `\n${prefix} ${selectedText}\n`;
+        selOffsetFrom = from + prefix.length + 2;
+        selOffsetTo = from + prefix.length + 2 + selectedText.length;
+      }
+      break;
+    }
+    case "paragraph": {
+      if (selectedText) {
+        replacement = selectedText.replace(/^#{1,6}\s+/, "");
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      }
+      break;
+    }
+    case "bold": {
+      if (isCollapsed) {
+        replacement = "**加粗文本**";
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 6;
+      } else if (selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4) {
+        replacement = selectedText.slice(2, -2);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `**${selectedText}**`;
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 2 + selectedText.length;
+      }
+      break;
+    }
+    case "italic": {
+      if (isCollapsed) {
+        replacement = "*斜体文本*";
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 5;
+      } else if (selectedText.startsWith("*") && selectedText.endsWith("*") && !selectedText.startsWith("**") && selectedText.length >= 2) {
+        replacement = selectedText.slice(1, -1);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `*${selectedText}*`;
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 1 + selectedText.length;
+      }
+      break;
+    }
+    case "strikethrough": {
+      if (isCollapsed) {
+        replacement = "~~删除线文本~~";
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 7;
+      } else if (selectedText.startsWith("~~") && selectedText.endsWith("~~") && selectedText.length >= 4) {
+        replacement = selectedText.slice(2, -2);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `~~${selectedText}~~`;
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 2 + selectedText.length;
+      }
+      break;
+    }
+    case "underline": {
+      if (isCollapsed) {
+        replacement = "<u>下划线文本</u>";
+        selOffsetFrom = from + 3;
+        selOffsetTo = from + 8;
+      } else if (selectedText.startsWith("<u>") && selectedText.endsWith("</u>") && selectedText.length >= 7) {
+        replacement = selectedText.slice(3, -4);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `<u>${selectedText}</u>`;
+        selOffsetFrom = from + 3;
+        selOffsetTo = from + 3 + selectedText.length;
+      }
+      break;
+    }
+    case "highlight": {
+      if (isCollapsed) {
+        replacement = "==高亮文本==";
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 6;
+      } else if (selectedText.startsWith("==") && selectedText.endsWith("==") && selectedText.length >= 4) {
+        replacement = selectedText.slice(2, -2);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `==${selectedText}==`;
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 2 + selectedText.length;
+      }
+      break;
+    }
+    case "link": {
+      if (isCollapsed) {
+        replacement = "[链接文字](https://)";
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 5;
+      } else {
+        replacement = `[${selectedText}](https://)`;
+        selOffsetFrom = from + selectedText.length + 3;
+        selOffsetTo = from + replacement.length - 1;
+      }
+      break;
+    }
+    case "image": {
+      if (isCollapsed) {
+        replacement = "![图片描述](https://)";
+        selOffsetFrom = from + 2;
+        selOffsetTo = from + 6;
+      } else {
+        replacement = `![${selectedText}](https://)`;
+        selOffsetFrom = from + selectedText.length + 4;
+        selOffsetTo = from + replacement.length - 1;
+      }
+      break;
+    }
+    case "code": {
+      if (isCollapsed) {
+        replacement = "`行内代码`";
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 5;
+      } else if (selectedText.startsWith("`") && selectedText.endsWith("`") && selectedText.length >= 2) {
+        replacement = selectedText.slice(1, -1);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `\`${selectedText}\``;
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 1 + selectedText.length;
+      }
+      break;
+    }
+    case "code-block": {
+      if (isCollapsed) {
+        replacement = "\n```javascript\n// 代码\n```\n";
+        const placeholder = "// 代码";
+        const start = replacement.indexOf(placeholder);
+        selOffsetFrom = from + start;
+        selOffsetTo = selOffsetFrom + placeholder.length;
+      } else {
+        replacement = `\n\`\`\`\n${selectedText}\n\`\`\`\n`;
+        selOffsetFrom = from + 4;
+        selOffsetTo = from + 4 + selectedText.length;
+      }
+      break;
+    }
+    case "math": {
+      if (isCollapsed) {
+        replacement = "$公式$";
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 3;
+      } else if (selectedText.startsWith("$") && selectedText.endsWith("$") && selectedText.length >= 2) {
+        replacement = selectedText.slice(1, -1);
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      } else {
+        replacement = `$${selectedText}$`;
+        selOffsetFrom = from + 1;
+        selOffsetTo = from + 1 + selectedText.length;
+      }
+      break;
+    }
+    case "quote": {
+      if (isCollapsed) {
+        replacement = "\n> 引用内容\n";
+        selOffsetFrom = from + 3;
+        selOffsetTo = from + 7;
+      } else {
+        const lines = selectedText.split("\n");
+        const allQuoted = lines.every((line) => !line.trim() || line.startsWith("> "));
+        if (allQuoted) {
+          replacement = lines.map((line) => {
+            if (line.startsWith("> ")) return line.slice(2);
+            if (line.startsWith(">")) return line.slice(1);
+            return line;
+          }).join("\n");
+        } else {
+          replacement = lines.map((line) => (line.length ? `> ${line}` : line)).join("\n");
+        }
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      }
+      break;
+    }
+    case "list": {
+      if (isCollapsed) {
+        replacement = "\n- 列表项\n";
+        selOffsetFrom = from + 3;
+        selOffsetTo = from + 6;
+      } else {
+        const lines = selectedText.split("\n");
+        replacement = lines.map((l) => (l.trim().startsWith("- ") ? l.trim().slice(2) : `- ${l}`)).join("\n");
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      }
+      break;
+    }
+    case "list-ordered": {
+      if (isCollapsed) {
+        replacement = "\n1. 列表项\n";
+        selOffsetFrom = from + 4;
+        selOffsetTo = from + 7;
+      } else {
+        const lines = selectedText.split("\n");
+        replacement = lines.map((l, idx) => `${idx + 1}. ${l}`).join("\n");
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      }
+      break;
+    }
+    case "table": {
+      replacement = "\n| 列 1 | 列 2 |\n| :--- | :--- |\n| 内容 1 | 内容 2 |\n";
+      selOffsetFrom = from + replacement.length;
+      selOffsetTo = selOffsetFrom;
+      break;
+    }
+    case "divider": {
+      replacement = isCollapsed ? "\n\n---\n\n" : `${selectedText}\n\n---\n\n`;
+      selOffsetFrom = from + replacement.length;
+      selOffsetTo = selOffsetFrom;
+      break;
+    }
+    case "task": {
+      if (isCollapsed) {
+        replacement = "\n- [ ] 待办事项\n";
+        selOffsetFrom = from + 7;
+        selOffsetTo = from + 11;
+      } else {
+        const lines = selectedText.split("\n");
+        replacement = lines.map((l) => (l.trim().startsWith("- [ ] ") ? l.trim().slice(6) : `- [ ] ${l}`)).join("\n");
+        selOffsetFrom = from;
+        selOffsetTo = from + replacement.length;
+      }
+      break;
+    }
+    case "callout": {
+      const kind = payload || "tip";
+      const titleMap = {
+        tip: t("editor.floatingToolbar.calloutTip"),
+        warning: t("editor.floatingToolbar.calloutWarning"),
+        danger: t("editor.floatingToolbar.calloutDanger"),
+        note: t("editor.floatingToolbar.calloutNote"),
+      };
+      const title = titleMap[kind] || "提示";
+      if (isCollapsed) {
+        const placeholder = "在此输入提示内容...";
+        replacement = `\n::: ${kind} ${title}\n${placeholder}\n:::\n`;
+        const start = replacement.indexOf(placeholder);
+        selOffsetFrom = from + start;
+        selOffsetTo = selOffsetFrom + placeholder.length;
+      } else {
+        const cleanContent = selectedText.trim() || "内容";
+        replacement = `\n::: ${kind} ${title}\n${cleanContent}\n:::\n`;
+        selOffsetFrom = from + replacement.length;
+        selOffsetTo = selOffsetFrom;
+      }
+      break;
+    }
+    case "emoji": {
+      const emojiChar = payload || "💡";
+      replacement = emojiChar;
+      selOffsetFrom = from + emojiChar.length;
+      selOffsetTo = selOffsetFrom;
+      break;
+    }
+    default:
+      return;
+  }
+
+  view.dispatch({
+    changes: { from, to, insert: replacement },
+    selection: { anchor: selOffsetFrom, head: selOffsetTo },
+  });
+
+  view.focus();
 }
 
 watch(
@@ -246,7 +568,7 @@ onBeforeUnmount(() => {
 
 <template>
   <aside
-    class="panel-surface relative grid min-h-0 min-w-0 grid-rows-[58px_minmax(0,1fr)_48px] overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+    class="panel-surface relative grid min-h-0 min-w-0 grid-rows-[58px_auto_minmax(0,1fr)_48px] overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
     @dragover="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop">
     <!-- Hidden HTML File Input for Fallback -->
     <input ref="fileInputRef" type="file" accept=".md,.markdown,.mdown,.mkd,.txt" class="hidden"
@@ -278,6 +600,9 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </div>
+
+    <!-- Persistent Formatting Toolbar -->
+    <MarkdownEditorToolbar @format="applyFormat" />
 
     <!-- CodeMirror Container -->
     <div class="relative min-h-0 overflow-hidden bg-white dark:bg-slate-900">
