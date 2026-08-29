@@ -471,7 +471,22 @@ async function renderPageToCanvas(page, width, height, themeClass, isTransparent
     };
     if (fontEmbedCSS) captureOptions.fontEmbedCSS = fontEmbedCSS;
 
-    const canvas = await toCanvas(posterNode, captureOptions);
+    // WebKit does not reliably include ECharts data-URL images in the cloned
+    // SVG. Keep their layout during capture, then composite their pixels once.
+    const echartsImages = Array.from(posterNode.querySelectorAll("img.echarts-export-image"));
+    const echartsImageOpacities = echartsImages.map((image) => image.style.opacity);
+    echartsImages.forEach((image) => {
+      image.style.opacity = "0";
+    });
+
+    let canvas;
+    try {
+      canvas = await toCanvas(posterNode, captureOptions);
+    } finally {
+      echartsImages.forEach((image, index) => {
+        image.style.opacity = echartsImageOpacities[index];
+      });
+    }
     compositeContentImages(canvas, posterNode);
     compositeCoverStickers(canvas, posterNode);
     compositeEChartsImages(canvas, posterNode);

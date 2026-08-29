@@ -1010,7 +1010,7 @@ export function parseEChartsOption(code) {
 /**
  * Optimizes ECharts options to eliminate wasteful canvas margins and fit card typography
  */
-function applyDefaultEChartsOption(option) {
+function applyDefaultEChartsOption(option, fontFamily = "") {
   if (!option || typeof option !== "object") return option;
 
   const hasCartesian = Boolean(
@@ -1044,6 +1044,13 @@ function applyDefaultEChartsOption(option) {
     animation: false,
     ...option,
   };
+
+  if (fontFamily) {
+    merged.textStyle = {
+      fontFamily,
+      ...(option.textStyle || {}),
+    };
+  }
 
   // If chart is a Pie chart, optimize label lines and radius while keeping it strictly horizontally centered
   if (isPie) {
@@ -1113,6 +1120,14 @@ function applyDefaultEChartsOption(option) {
 export async function renderEChartsDiagrams(container) {
   if (!container) return;
   const rawNodes = Array.from(container.querySelectorAll(".echarts-render-container"));
+  if (!rawNodes.length) return;
+
+  // Canvas text metrics are fixed when setOption() runs. Wait for web fonts
+  // first so CJK labels use the same glyph widths in preview and export.
+  if (typeof document !== "undefined" && document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
   for (const node of rawNodes) {
     const rawCode = node.getAttribute("data-code");
     if (!rawCode || node.getAttribute("data-rendered") === "true") continue;
@@ -1138,7 +1153,8 @@ export async function renderEChartsDiagrams(container) {
         chart.resize({ width, height });
       }
 
-      const finalOption = applyDefaultEChartsOption(option);
+      const fontFamily = getComputedStyle(node).fontFamily;
+      const finalOption = applyDefaultEChartsOption(option, fontFamily);
       chart.setOption(finalOption, true);
 
       // Force synchronous flush to paint canvas immediately
@@ -1168,4 +1184,3 @@ export function disposeEChartsDiagrams(container) {
     node._echartsInstance = null;
   }
 }
-
