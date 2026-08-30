@@ -73,7 +73,7 @@ The files in [`imgs/EN`](imgs/EN) are real card exports produced by MarkCard Stu
 
 ## Charts & Data Visualizations (ECharts)
 
-MarkCard Studio natively supports interactive and static **ECharts** diagrams directly in Markdown via ````echarts` code blocks. Charts automatically adapt to card themes and dark mode, respect compact vertical spacing, and export sharply to high-resolution PNG, JPG, and PDF without rasterization clipping.
+MarkCard Studio natively supports interactive and static **ECharts** diagrams directly in Markdown via `echarts` code blocks. Charts automatically adapt to card themes and dark mode, respect compact vertical spacing, and export sharply to high-resolution PNG, JPG, and PDF without rasterization clipping.
 
 ### 1. Basic Syntax
 
@@ -82,7 +82,7 @@ Write an `echarts` code block using either **JSON format** or **JavaScript Objec
 #### Format A: Standard JSON
 Strict JSON syntax with double-quoted keys. Great for structured data, API responses, and AI-generated content:
 
-```markdown
+````markdown
 ```echarts
 {
   "title": { "text": "Quarterly Revenue" },
@@ -96,12 +96,12 @@ Strict JSON syntax with double-quoted keys. Great for structured data, API respo
   }]
 }
 ```
-```
+````
 
 #### Format B: JavaScript Object (Natural & Concise)
 Standard JavaScript object syntax with unquoted keys, single quotes, trailing commas, and optional comments:
 
-```markdown
+````markdown
 ```echarts
 {
   title: { text: 'Quarterly Revenue' },
@@ -115,27 +115,27 @@ Standard JavaScript object syntax with unquoted keys, single quotes, trailing co
   }]
 }
 ```
-```
+````
 
 ### 2. Customizing Chart Height
 
 MarkCard Studio automatically infers optimal chart heights based on chart complexity. If you want to explicitly specify a fixed pixel height, two main syntax formats are supported on the code fence:
 
 1. **Direct number (Concise)**:
-   ```markdown
+   ````markdown
    ```echarts 260
    { ... }
    ```
-   ```
-   *(Also accepts ````echarts 260px`)*
+   ````
+   *(Also accepts `echarts 260px`)*
 
 2. **Attribute assignment (`height=...` or `h=...`)**:
-   ```markdown
+   ````markdown
    ```echarts height=260
    { ... }
    ```
-   ```
-   *(Also accepts ````echarts h=260` or ````echarts height:260`)*
+   ````
+   *(Also accepts `echarts h=260` or `echarts height:260`)*
 
 > 💡 **Tip**: You can also specify height inside the code block via a leading comment (e.g. `// height: 260`) or directly as an Option property (`{ "height": 260, ... }`). Height values are safely bounded between 120px and 600px.
 

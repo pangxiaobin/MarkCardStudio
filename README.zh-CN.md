@@ -83,16 +83,16 @@ MarkCard Studio 是一款面向内容创作者和知识分享者的本地优先�
 
 ## 数据图表支持 (ECharts)
 
-MarkCard Studio 原生支持在 Markdown 中直接使用 ````echarts` 代码块嵌入数据图表。图表完全契合卡片排版流与深浅主题模式，并针对卡片边距与对称居中做了专门调优，在导出高分辨率 PNG、JPG、PDF 或长图时以纯净矢量光栅化呈现，杜绝截断。
+MarkCard Studio 原生支持在 Markdown 中直接使用 `echarts` 代码块嵌入数据图表。图表完全契合卡片排版流与深浅主题模式，并针对卡片边距与对称居中做了专门调优，在导出高分辨率 PNG、JPG、PDF 或长图时以纯净矢量光栅化呈现，杜绝截断。
 
 ### 1. 基础语法
 
-使用 ````echarts` 代码块嵌入图表，原生支持 **标准 JSON 格式** 与 **JavaScript 对象字面量格式**：
+使用 `echarts` 代码块嵌入图表，原生支持 **标准 JSON 格式** 与 **JavaScript 对象字面量格式**：
 
 #### 方案 A：标准 JSON 格式
 严格的 JSON 语法规范（键名需双引号），适合结构化数据导入、程序生成或 AI 输出：
 
-```markdown
+````markdown
 ```echarts
 {
   "title": { "text": "季度销售统计" },
@@ -106,12 +106,12 @@ MarkCard Studio 原生支持在 Markdown 中直接使用 ````echarts` 代码块�
   }]
 }
 ```
-```
+````
 
 #### 方案 B：JavaScript 对象格式（推荐手写）
 更加自然自由的 JS 对象语法，支持无引号键名、单引号、尾随逗号与行内注释：
 
-```markdown
+````markdown
 ```echarts
 {
   title: { text: '季度销售统计' },
@@ -125,27 +125,27 @@ MarkCard Studio 原生支持在 Markdown 中直接使用 ````echarts` 代码块�
   }]
 }
 ```
-```
+````
 
 ### 2. 自定义图表高度
 
 如果不指定高度，系统会根据系列类型与数据量自动推算最佳高度。如需显式指定固定像素高度，代码块首行支持以下两种主要声明格式：
 
 1. **直接填写数字（简洁推荐）**：
-   ```markdown
+   ````markdown
    ```echarts 260
    { ... }
    ```
-   ```
-   *(亦支持带单位写法：````echarts 260px`)*
+   ````
+   *(亦支持带单位写法：`echarts 260px`)*
 
 2. **属性赋值格式（语义化：`height=...` 或 `h=...`）**：
-   ```markdown
+   ````markdown
    ```echarts height=260
    { ... }
    ```
-   ```
-   *(亦支持缩写或冒号格式：````echarts h=260`、````echarts height:260`)*
+   ````
+   *(亦支持缩写或冒号格式：`echarts h=260`、`echarts height:260`)*
 
 > 💡 **补充兼容**：除首行声明外，也支持在代码块内部第一行通过注释指定（如 `// height: 260`）或在 Option 配置内设置属性（`{ "height": 260, ... }`）。高度数值会被统一安全约束在 120px 至 600px 之间，确保卡片版面协调。
 
